@@ -68,58 +68,58 @@ import { MdOutlineShareLocation } from "react-icons/md";
 import { useGlobalContext } from "@/providers/global-provider";
 import LoadDetails from "@/components/shared/load-details";
 
-export const eventLocationType = (
-  location: string,
-  size?: number,
-  shouldShow?: boolean,
-  className?: string
-) => {
-  return (
-    <span className={cn("flex items-center gap-2 text-sm", className)}>
-      {location && location.includes("meet.google.com") ? (
-        <>
-          Google Meet
-          <SiGooglemeet
-            size={size ? size : 16}
-            className="text-sm text-muted-foreground min-w-[18px]"
-          />
-        </>
-      ) : location && location.includes("youtube.com") ? (
-        <>
-          YouTube
-          <TbBrandYoutubeFilled
-            size={size ? size : 16}
-            className="text-sm text-muted-foreground min-w-[18px]"
-          />
-        </>
-      ) : location && location.includes("bit.ly") ? (
-        <>
-          Bitly
-          <SiBitly
-            size={size ? size : 16}
-            className="text-sm text-muted-foreground min-w-[18px]"
-          />
-        </>
-      ) : location && location.includes("https://" || "http://") ? (
-        <>
-          {shouldShow ? location : "Online Location"}
-          <HiStatusOnline
-            size={size ? size : 16}
-            className="text-sm text-muted-foreground min-w-[18px]"
-          />
-        </>
-      ) : (
-        <>
-          {shouldShow ? location : "Offline Location"}
-          <GrMapLocation
-            size={size ? size : 16}
-            className="text-sm text-muted-foreground min-w-[18px]"
-          />
-        </>
-      )}
-    </span>
-  );
-};
+// export const eventLocationType = (
+//   location: string,
+//   size?: number,
+//   shouldShow?: boolean,
+//   className?: string
+// ) => {
+//   return (
+//     <span className={cn("flex items-center gap-2 text-sm", className)}>
+//       {location && location.includes("meet.google.com") ? (
+//         <>
+//           Google Meet
+//           <SiGooglemeet
+//             size={size ? size : 16}
+//             className="text-sm text-muted-foreground min-w-[18px]"
+//           />
+//         </>
+//       ) : location && location.includes("youtube.com") ? (
+//         <>
+//           YouTube
+//           <TbBrandYoutubeFilled
+//             size={size ? size : 16}
+//             className="text-sm text-muted-foreground min-w-[18px]"
+//           />
+//         </>
+//       ) : location && location.includes("bit.ly") ? (
+//         <>
+//           Bitly
+//           <SiBitly
+//             size={size ? size : 16}
+//             className="text-sm text-muted-foreground min-w-[18px]"
+//           />
+//         </>
+//       ) : location && location.includes("https://" || "http://") ? (
+//         <>
+//           {shouldShow ? location : "Online Location"}
+//           <HiStatusOnline
+//             size={size ? size : 16}
+//             className="text-sm text-muted-foreground min-w-[18px]"
+//           />
+//         </>
+//       ) : (
+//         <>
+//           {shouldShow ? location : "Offline Location"}
+//           <GrMapLocation
+//             size={size ? size : 16}
+//             className="text-sm text-muted-foreground min-w-[18px]"
+//           />
+//         </>
+//       )}
+//     </span>
+//   );
+// };
 
 export default function CreateEventPage() {
   const router = useRouter();
@@ -723,7 +723,7 @@ export default function CreateEventPage() {
                       <p className="border-b py-3 pr-3 w-full text-sm flex items-center justify-between">
                         <span className="text-foreground">Event Location</span>
                         <span className="flex items-center text-muted-foreground">
-                          {eventLocationType(field.value as string)}
+                          {/* {eventLocationType(field.value as string)} */}
                         </span>
                       </p>
                     </div>

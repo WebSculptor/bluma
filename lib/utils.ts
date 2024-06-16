@@ -149,20 +149,6 @@ export const formatReadableDate = (dateString: any) => {
 //   return initials.join("");
 // };
 
-export const stringToSlug = (str: string) => {
-  return str
-    .toLowerCase() // Convert to lowercase
-    .replace(/[^\w\s.-]/g, "") // Remove non-word characters except hyphens, spaces, and decimal points
-    .trim() // Trim leading and trailing spaces
-    .replace(/\s+/g, "-");
-};
-
-export const slugToString = (slug: string) => {
-  return slug
-    .replace(/-/g, " ") // Replace hyphens with spaces
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-};
-
 export const getExpiryDate = (timestamp: number) => {
   const currentDate = Date.now();
   const diffInMilliseconds = timestamp - currentDate;

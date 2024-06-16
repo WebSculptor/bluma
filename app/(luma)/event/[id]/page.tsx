@@ -30,7 +30,6 @@ import {
   AlertDialogContent,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { eventLocationType } from "../../create/page";
 import { MdPayments } from "react-icons/md";
 import { Input } from "@/components/ui/input";
 import { AlarmClock, Loader } from "lucide-react";
@@ -78,6 +77,8 @@ export default function EventDetails({ params }: { params: { id: number } }) {
           credentials?.address.toLowerCase().toString()
         ) {
           setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
         }
       }
 
@@ -105,7 +106,7 @@ export default function EventDetails({ params }: { params: { id: number } }) {
         setHasJoinedGroup(isMemberInGroup);
       }
 
-      if (event) return true;
+      return true;
     } catch (error: any) {
       console.log("FAILD TO FETCH EVENT:", error);
     }
@@ -270,13 +271,7 @@ export default function EventDetails({ params }: { params: { id: number } }) {
               </p>
 
               <div className="flex flex-col gap-2">
-                {event?.regStartsTime && event?.regStartsTime > Date.now() ? (
-                  <p className="text-sm font-medium">
-                    Registration starts on{" "}
-                    <b>{format(event?.regStartsTime!, "LLL dd")}</b> and ends on{" "}
-                    <b>{format(event?.regEndsTime!, "LLL dd")}</b>
-                  </p>
-                ) : event?.regStatus === "OPEN" ? (
+                {event?.regStartsTime && event?.regStartsTime >= Date.now() ? (
                   <>
                     <p className="text-sm font-medium">
                       Keep track of the latest information and updates on the
@@ -299,6 +294,13 @@ export default function EventDetails({ params }: { params: { id: number } }) {
                       )}
                     </div>
                   </>
+                ) : event?.regStartsTime &&
+                  event?.regStartsTime <= Date.now() ? (
+                  <p className="text-sm font-medium">
+                    Registration starts on{" "}
+                    <b>{format(event?.regStartsTime!, "LLL dd")}</b> and ends on{" "}
+                    <b>{format(event?.regEndsTime!, "LLL dd")}</b>
+                  </p>
                 ) : (
                   event?.regEndsTime &&
                   Date.now() > event?.regEndsTime && (
@@ -325,12 +327,12 @@ export default function EventDetails({ params }: { params: { id: number } }) {
           </div>
 
           <div className="flex justify-start">
-            {eventLocationType(
+            {/* {eventLocationType(
               event?.location as string,
               32,
               true,
               "flex-row-reverse text-base text-foreground gap-3"
-            )}
+            )} */}
           </div>
         </div>
 
