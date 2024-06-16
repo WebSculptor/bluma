@@ -1,6 +1,6 @@
 "use client";
 
-import { formatDate, shortenAddress, stringToSlug } from "@/lib/utils";
+import { formatDate, shortenAddress } from "@/lib/utils";
 import { useGlobalContext } from "@/providers/global-provider";
 import Image from "next/image";
 import Link from "next/link";
@@ -12,7 +12,6 @@ import { FaEthereum } from "react-icons/fa";
 import { TbCashBanknoteOff } from "react-icons/tb";
 import { Badge } from "../ui/badge";
 import { format } from "date-fns";
-import { eventLocationType } from "@/app/(luma)/create/page";
 
 export default function EventCard(event: IEvent) {
   const router = useRouter();
@@ -86,12 +85,12 @@ export default function EventCard(event: IEvent) {
             </div>
 
             <p>
-              {eventLocationType(
+              {/* {eventLocationType(
                 event?.location as string,
                 16,
                 true,
                 "flex-row-reverse justify-start w-max"
-              )}
+              )} */}
             </p>
 
             <div className="mt-2 flex items-center gap-2">
