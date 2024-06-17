@@ -46,7 +46,7 @@ export default function Header() {
     useGlobalContext();
 
   return (
-    <header className="px-4 py-3 flex items-center justify-between md:justify-normal backdrop-blur-md gap-6 md:gap-0 sticky top-0 z-50">
+    <header className="px-4 py-3 flex items-center justify-between md:justify-normal bg-background border-b sm:border-b-0 sm:backdrop-blur-md gap-6 md:gap-0 sticky top-0 z-50">
       <div className="w-max xl:w-[350px]">
         <Logo path="/" />
       </div>

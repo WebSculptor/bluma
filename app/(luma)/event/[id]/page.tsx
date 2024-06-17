@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { EventStatus, EventType, RegStatus } from "@/enums";
 import {
+  browserNotification,
   calculateDateDifference,
   formatDate,
   getExpiryDate,
@@ -12,6 +13,7 @@ import {
   getAllTicketsOfAnEvent,
   getEthereumContracts,
   getEventById,
+  getEventGroupById,
   getGroupMembersOfAnEvent,
   getUser,
   joinGroup,
@@ -61,12 +63,17 @@ export default function EventDetails({ params }: { params: { id: number } }) {
   const [hasBoughtTicket, setHasBoughtTicket] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  const currentDate = new Date();
+  const endTimestamp = currentDate.getTime();
+
   const fetchEventData = async (eventId: number) => {
     try {
       // ? GETTING EVENT
       const event = await getEventById(eventId);
       if (event) {
         setEvent(event);
+
+        console.log(event);
 
         // ? GET EVENT OWNER
         const currentEventOwner = await getUser(event?.owner);
@@ -137,6 +144,17 @@ export default function EventDetails({ params }: { params: { id: number } }) {
         "TicketPurchased",
         async (buyer, _eventId, numberOfTickets) => {
           await fetchEventData(Number(params?.id));
+          if (event?.eventType === "FREE") {
+            browserNotification(
+              `${numberOfTickets} ticket jained`,
+              `Congratulations, You now have ${numberOfTickets} tickets for the ${event?.title} event!`
+            );
+          } else {
+            browserNotification(
+              `${numberOfTickets} ticket purchased`,
+              `Congratulations, You now have ${numberOfTickets} tickets for the ${event?.title} event!`
+            );
+          }
         }
       );
 
@@ -188,7 +206,8 @@ export default function EventDetails({ params }: { params: { id: number } }) {
 
               <Link
                 href={`/user/${eventOwner?.address}`}
-                className="text-sm flex items-center gap-2 w-max group">
+                className="text-sm flex items-center gap-2 w-max group"
+              >
                 <span className="size-5 bg-secondary rounded-full border relative">
                   <Image
                     alt={eventOwner?.address as string}
@@ -224,7 +243,8 @@ export default function EventDetails({ params }: { params: { id: number } }) {
                 {ticketBuyers?.slice(0, 6)?.map((member) => (
                   <span
                     className="size-8 bg-secondary rounded-full relative border-4 border-background first:-ml-1 -ml-3"
-                    key={member?.email}>
+                    key={member?.email}
+                  >
                     <Image
                       alt={member?.address as string}
                       src={
@@ -271,7 +291,15 @@ export default function EventDetails({ params }: { params: { id: number } }) {
               </p>
 
               <div className="flex flex-col gap-2">
-                {event?.regStartsTime && event?.regStartsTime >= Date.now() ? (
+                <p className="text-sm font-medium">
+                  {calculateDateDifference({
+                    startTimestamp: Number(event?.regStartsTime),
+                    endTimestamp: Number(endTimestamp),
+                    endedMessage: "Registration has ended",
+                    notStartedMessage: "Registration has not started yet",
+                  })}
+                </p>
+                {event?.regStartsTime && event?.regStartsTime < Date.now() ? (
                   <>
                     <p className="text-sm font-medium">
                       Keep track of the latest information and updates on the
@@ -284,7 +312,8 @@ export default function EventDetails({ params }: { params: { id: number } }) {
                         <Button variant="secondary" className="w-full" asChild>
                           <Link
                             className="flex items-center"
-                            href={`/rooms/${Number(event?.eventId)}`}>
+                            href={`/rooms/${Number(event?.eventId)}`}
+                          >
                             <PiWechatLogoDuotone size={16} className="mr-2" />
                             Go to Room
                           </Link>
@@ -295,7 +324,7 @@ export default function EventDetails({ params }: { params: { id: number } }) {
                     </div>
                   </>
                 ) : event?.regStartsTime &&
-                  event?.regStartsTime <= Date.now() ? (
+                  event?.regStartsTime > Date.now() ? (
                   <p className="text-sm font-medium">
                     Registration starts on{" "}
                     <b>{format(event?.regStartsTime!, "LLL dd")}</b> and ends on{" "}
@@ -343,8 +372,12 @@ export default function EventDetails({ params }: { params: { id: number } }) {
         {event && Date.now() < event?.eventEndsTime && (
           <>
             <span>
-              {calculateDateDifference(event?.eventEndsTime, Date.now())}{" "}
-              remaining
+              {calculateDateDifference({
+                startTimestamp: Number(event?.eventEndsTime),
+                endTimestamp: Number(endTimestamp),
+                endedMessage: "Event has already ended",
+                notStartedMessage: "Event has not started yet",
+              })}
             </span>
           </>
         )}
@@ -377,20 +410,10 @@ export default function EventDetails({ params }: { params: { id: number } }) {
             className="overflow-hidden leading-6 whitespace-pre-wrap break-words flex-1 text-sm"
             components={{
               pre: ({ node, ...props }) => (
-                <div className="flex flex-col">
-                  <div className="flex items-center rounded-t-lg w-full h-8 px-4 bg-zinc-700 gap-x-1">
-                    <span className="bg-red-500 w-3 h-3 rounded-full cursor-pointer"></span>
-                    <span className="bg-yellow-500 w-3 h-3 rounded-full cursor-pointer"></span>
-                    <span className="bg-green-500 w-3 h-3 rounded-full cursor-pointer"></span>
-                  </div>
-
-                  <div className="overflow-auto w-full rounded-b-lg bg-zinc-800 text-zinc-100 whitespace-pre-wrap break-words">
-                    <pre
-                      {...props}
-                      className="text-sm leading-6 markdown prose w-full break-words"
-                    />
-                  </div>
-                </div>
+                <pre
+                  {...props}
+                  className="text-sm leading-6 markdown prose w-full break-words"
+                />
               ),
               code: ({ node, ...props }) => (
                 <code
@@ -398,7 +421,8 @@ export default function EventDetails({ params }: { params: { id: number } }) {
                   {...props}
                 />
               ),
-            }}>
+            }}
+          >
             {event?.description}
           </ReactMarkdown>
         </div>
@@ -512,7 +536,8 @@ const BuyTicketPopup = ({
               disabled={isPurchasing}
               onClick={handleSubmit}
               type="submit"
-              className="w-1/2">
+              className="w-1/2"
+            >
               {isPurchasing ? (
                 <Loader size={16} className="animate-spin" />
               ) : eventType === "FREE" ? (
@@ -589,7 +614,8 @@ const JoinGroupPopup = ({
           <Button
             className="w-full"
             onClick={handleJoiningGroup}
-            disabled={isJoining}>
+            disabled={isJoining}
+          >
             {isJoining ? (
               <>
                 <Loader size={16} className="mr-2 animate-spin" />

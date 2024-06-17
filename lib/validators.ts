@@ -35,5 +35,5 @@ export const createEventSchema = z.object({
 });
 
 export const sendMessageSchema = z.object({
-  message: z.string().min(2).max(200),
+  message: z.string().min(2).max(700),
 });

@@ -84,6 +84,21 @@ export default function GlobalContextProvider({ children }: ILayout) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, router]);
 
+  useEffect(() => {
+    // let notification: any;
+    Notification.requestPermission();
+
+    // document.addEventListener("visibilitychange", async () => {
+    //   if (document.visibilityState === "hidden") {
+    //     notification = new Notification("Come back", {
+    //       body: "Don't go",
+    //     });
+    //   } else {
+    //     notification.close();
+    //   }
+    // });
+  }, []);
+
   const propsValue: IGlobalContextProvider = {
     isAuthenticated,
     setIsAuthenticated,

@@ -9,7 +9,7 @@ export default function LandingPageLayout({ children }: ILayout) {
   // );
   return (
     <div className="flex-1 flex flex-col">
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col px-4 md:px-0">
         {children}
         <Footer />
       </div>

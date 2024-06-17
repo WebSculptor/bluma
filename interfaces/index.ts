@@ -79,6 +79,6 @@ type ICreateEvent = Pick<
 interface IMessage {
   sender: string;
   email: string;
-  message: string;
+  content: string;
   timestamp: number;
 }

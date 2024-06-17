@@ -169,22 +169,41 @@ export const formatDate = (timestamp: number) => {
   return formattedDate;
 };
 
-export const calculateDateDifference = (
-  startTimestamp: number,
-  endTimestamp: number
-) => {
-  const diffInMs = Math.abs(endTimestamp - startTimestamp);
+export const calculateDateDifference = ({
+  startTimestamp,
+  endTimestamp,
+  endedMessage,
+  notStartedMessage,
+}: {
+  startTimestamp: number;
+  endTimestamp: number;
+  endedMessage: string;
+  notStartedMessage: string;
+}) => {
+  const currentDate = new Date();
+  const startDate: any = new Date(startTimestamp);
+  const endDate: any = new Date(endTimestamp);
 
+  if (currentDate > startDate) {
+    return endedMessage;
+  }
+  if (currentDate < startDate) {
+    return notStartedMessage;
+  }
+
+  const diffInMs = Math.abs(endDate - startDate);
   const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
   if (diffInDays > 0) {
     return `${diffInDays} day(s)`;
   }
 
   const diffInHours = Math.floor((diffInMs / (1000 * 60 * 60)) % 24);
   const diffInMinutes = Math.floor((diffInMs / (1000 * 60)) % 60);
-  const diffInSeconds = Math.floor((diffInMs / 1000) % 60);
 
-  return `${diffInHours} hour(s), ${diffInMinutes} minute(s), ${diffInSeconds} second(s)`;
+  return `${diffInHours} ${
+    diffInHours < 2 ? "hour" : "hours"
+  }, ${diffInMinutes} ${diffInMinutes < 2 ? "minute" : "minutes"}`;
 };
 
 export const timestampToDatetimeLocal = (timestamp: number): string => {
@@ -196,4 +215,17 @@ export const timestampToDatetimeLocal = (timestamp: number): string => {
   const minutes = String(date.getMinutes()).padStart(2, "0");
 
   return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+export const browserNotification = (title: string, description: string) => {
+  Notification.requestPermission().then((perm) => {
+    if (perm === "granted") {
+      new Notification(title, {
+        body: description,
+        icon: "/assets/logo.png",
+        silent: false,
+        vibrate: [200, 100, 200],
+      });
+    }
+  });
 };

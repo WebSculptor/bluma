@@ -8,7 +8,7 @@ export default function MaxWrapper({ children, className }: IWrapper) {
 
   return (
     <section
-      className={cn("mx-auto px-4 w-full max-w-[820px]", className, {
+      className={cn("mx-auto md:px-4 w-full max-w-[820px]", className, {
         "max-w-[960px]":
           pathname === "/" ||
           pathname === "/create" ||

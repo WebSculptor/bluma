@@ -1,21 +1,41 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import { getAllGroupMessages } from "@/services";
-import React, { useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { browserNotification, cn } from "@/lib/utils";
+import { useGlobalContext } from "@/providers/global-provider";
+import {
+  getAllGroupMessages,
+  getEthereumContracts,
+  getEventGroupById,
+} from "@/services";
+import Image from "next/image";
+import React, { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 export default function GroupChatPage({
   params,
 }: {
   params: { groupId: number };
 }) {
+  const { credentials } = useGlobalContext();
+
   const [allMessages, setAllMessages] = useState<IMessage[] | undefined>([]);
+  const [groupMembers, setGroupMembers] = useState<any[] | undefined>([]);
   const [isFetchingMessages, setIsFetchingMessages] = useState(false);
+  const messagesEndRef: any = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [allMessages]);
 
   const fetchMessages = async (groupId: number) => {
     try {
-      const messages = await getAllGroupMessages(groupId);
-      if (messages) return messages;
+      const group = await getEventGroupById(Number(groupId));
+      return group;
     } catch (error: any) {
       console.log("SOMETHING WENT WRONG:", error);
     }
@@ -26,106 +46,168 @@ export default function GroupChatPage({
       setIsFetchingMessages(true);
       try {
         const data = await fetchMessages(Number(params?.groupId));
-        console.log("ALL MESSAGES:", data);
-        setAllMessages(data);
+        setAllMessages(data?.messages);
+        setGroupMembers(data?.members);
+        console.log(data);
       } catch (error: any) {
         console.log(error);
       } finally {
         setIsFetchingMessages(false);
       }
     };
-
     fetchData();
   }, [params?.groupId]);
 
-  const testMsgs = [
-    {
-      email: "abdullahisalihuinusa@gmail.com",
-      message:
-        "Hello guys\nI just registered for this event and hope to see you all there!",
-    },
-    {
-      email: "johndoe@gmail.com",
-      message:
-        "Regretfully, the project will have to be delayed due to technological issues and the project's extreme complexity. If more action is required, I will, nevertheless, keep you all updated.",
-    },
-    {
-      email: "daniel@gmail.com",
-      message: "Not cool man 😩",
-    },
-  ];
+  useEffect(() => {
+    let contract: any; // Declare contract variable outside useEffect
+
+    const fetchData = async () => {
+      setIsFetchingMessages(true);
+      try {
+        const data = await fetchMessages(Number(params?.groupId));
+        setAllMessages(data?.messages);
+        console.log(data);
+      } catch (error: any) {
+        console.log(error);
+      } finally {
+        setIsFetchingMessages(false);
+      }
+    };
+    fetchData();
+
+    const listenForEvent = async () => {
+      contract = await getEthereumContracts(); // Assign contract here
+
+      const messageSentHandler = async (
+        sender: any,
+        groupId: number,
+        text: string,
+        timestamp: number
+      ) => {
+        try {
+          // Check if the new message belongs to the current group
+          if (Number(groupId) === Number(params?.groupId)) {
+            const data = await fetchMessages(Number(params?.groupId));
+            setAllMessages(data?.messages);
+
+            const sender = data?.messages?.map((mg) => mg.sender);
+            if (sender !== credentials?.address) {
+              browserNotification(
+                "New Message",
+                `There's a new message in the ${data?.title} event room`
+              );
+            }
+          }
+        } catch (error: any) {
+          console.log(error);
+        }
+      };
+
+      contract.on("MessageSent", messageSentHandler);
+
+      // Return cleanup function to remove the event listener when component unmounts
+      return () => {
+        if (contract) {
+          contract.off("MessageSent", messageSentHandler);
+        }
+      };
+    };
+
+    listenForEvent();
+
+    // Cleanup function to remove the event listener when component unmounts
+    return () => {
+      if (contract) {
+        contract.removeAllListeners("MessageSent");
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array to run only once when component mounts
 
   return (
     <div className="flex flex-col">
-      {testMsgs.map((msg, _key) => (
-        <div
-          className={cn(
-            "w-full flex justify-start p-4 md:py-6 border-t first:border-t-0 bg-background",
-            {
-              "bg-secondary/40 justify-end": msg.email === "johndoe@gmail.com",
-            }
-          )}
-          key={_key}>
+      {isFetchingMessages ? (
+        Array.from({ length: 3 }).map((_, _key) => (
           <div
-            className={cn("flex gap-3", {
-              "flex-row-reverse": msg.email === "johndoe@gmail.com",
-            })}>
-            <div className="rounded-full hidden md:flex bg-secondary size-8"></div>
+            key={_key}
+            className="w-full flex justify-start p-4 md:py-6 bg-background border-t first:border-t-0"
+          >
+            <div className="flex gap-3 w-full">
+              <Skeleton className="rounded-full hidden md:flex size-8" />
 
-            <div
-              className={cn("flex flex-col items-start gap-1 flex-1", {
-                "items-end": msg.email === "johndoe@gmail.com",
-              })}>
-              <p className="text-xs text-muted-foreground">{msg.email}</p>
+              <div className="flex flex-col items-start gap-1 flex-1">
+                <Skeleton className="h-3 w-28" />
 
-              <div className="flex-1 max-w-lg">
-                <pre className="font-sans text-sm whitespace-pre-wrap flex-1 leading-[22px]">
-                  {msg.message}
-                </pre>
+                <div className="w-full max-w-lg mt-4 gap-2 flex flex-col">
+                  <Skeleton className="h-3 w-[calc(100%-30%)]" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-[calc(100%-10%)]" />
+                </div>
               </div>
-
-              {/* {msg?.image &&
-                (msg.email === "johndoe@gmail.com" ? (
-                  <div className="mt-4 bg-background max-w-xs w-full flex flex-col rounded-lg">
-                    <div className="w-full rounded-[inherit] overflow-hidden p-2">
-                      <div className="rounded-[inherit] overflow-hidden relative">
-                        <Image
-                          src={msg?.image}
-                          alt={`Uploaded by ${msg.email}`}
-                          width={320}
-                          height={320}
-                          priority
-                          className="size-auto"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-4 bg-secondary/50 border max-w-xs w-full flex flex-col rounded-lg">
-                    <div className="w-inherit rounded-[inherit] overflow-hidden p-2">
-                      <div className="w-[inherit] rounded-[inherit] overflow-hidden relative">
-                        <Image
-                          src={msg?.image}
-                          alt={`Uploaded by ${msg.email}`}
-                          width={320}
-                          height={320}
-                          priority
-                          className="size-auto"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t p-2">
-                      <Button className="w-full" variant="secondary">
-                        <Download size={16} className="mr-2" /> Download
-                      </Button>
-                    </div>
-                  </div>
-                ))} */}
             </div>
           </div>
-        </div>
-      ))}
+        ))
+      ) : (
+        <>
+          {groupMembers?.map((member) => (
+            <div
+              className="flex items-center w-full justify-center gap-4 py-4"
+              key={member?.timestamp}
+            >
+              <span className="h-px flex-1 bg-secondary" />
+              <p className="text-sm text-muted-foreground">
+                {member?.email} joined {member?.timestamp}
+              </p>
+              <span className="h-px flex-1 bg-secondary" />
+            </div>
+          ))}
+          {allMessages?.map((msg) => (
+            <div
+              className={cn(
+                "w-full flex justify-start p-4 md:py-6 border-t first:border-t-0 bg-background",
+                {
+                  "bg-secondary/40": msg?.sender === credentials?.address,
+                }
+              )}
+              key={msg.timestamp}
+            >
+              <div className="flex gap-3">
+                <div className="rounded-full hidden sm:flex bg-secondary size-8 relative">
+                  {/* <Image src={? `https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${ms}`
+                      : "/assets/logo.png"} alt={message?.sender.toString()} fill priority className="size-full rounded-full" /> */}
+                </div>
+
+                <div className="flex flex-col items-start gap-1 flex-1">
+                  <p className="text-xs text-muted-foreground">
+                    {msg.sender === credentials?.address ? "You" : msg.email}
+                  </p>
+
+                  <ReactMarkdown
+                    className="overflow-hidden leading-6 whitespace-pre-wrap break-words flex-1 text-sm"
+                    components={{
+                      pre: ({ node, ...props }) => (
+                        <pre
+                          {...props}
+                          className="text-sm leading-6 markdown prose w-full break-words"
+                        />
+                      ),
+                      code: ({ node, ...props }) => (
+                        <code
+                          className="text-primary bg-secondary px-1 py-0.5 text-sm markdown prose break-words rounded-sm"
+                          {...props}
+                        />
+                      ),
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </>
+      )}
     </div>
   );
 }

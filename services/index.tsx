@@ -9,32 +9,67 @@ const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS!;
 
 if (typeof window !== "undefined") ethereum = (window as any).ethereum;
 
+// export const getEthereumContracts = async () => {
+//   const accounts = await ethereum?.request?.({ method: "eth_accounts" });
+
+//   if (accounts?.length > 0) {
+//     const provider = new ethers.BrowserProvider(ethereum);
+//     const signer = await provider.getSigner();
+//     const contracts = new ethers.Contract(
+//       CONTRACT_ADDRESS,
+//       CONTRACT_ABI,
+//       signer
+//     );
+
+//     return contracts;
+//   } else {
+//     const provider = new ethers.JsonRpcProvider(
+//       process.env.NEXT_PUBLIC_RPC_URL
+//     );
+//     const wallet = ethers.Wallet.createRandom();
+//     const signer = wallet.connect(provider);
+//     const contracts = new ethers.Contract(
+//       CONTRACT_ADDRESS,
+//       CONTRACT_ABI,
+//       signer
+//     );
+
+//     return contracts;
+//   }
+// };
+
 export const getEthereumContracts = async () => {
-  const accounts = await ethereum?.request?.({ method: "eth_accounts" });
+  if (!window.ethereum) {
+    throw new Error("MetaMask is not installed");
+  }
 
-  if (accounts?.length > 0) {
-    const provider = new ethers.BrowserProvider(ethereum);
-    const signer = await provider.getSigner();
+  try {
+    const accounts = await ethereum?.request({ method: "eth_accounts" });
+
+    let provider;
+    let signer;
+
+    if (accounts?.length > 0) {
+      provider = new ethers.BrowserProvider(ethereum);
+      signer = await provider.getSigner();
+    } else {
+      // provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_RPC_URL);
+      provider = new ethers.WebSocketProvider(
+        process.env.NEXT_PUBLIC_WEB_SOCKET!
+      );
+      const wallet = ethers.Wallet.createRandom();
+      signer = wallet.connect(provider);
+    }
+
     const contracts = new ethers.Contract(
       CONTRACT_ADDRESS,
       CONTRACT_ABI,
       signer
     );
-
     return contracts;
-  } else {
-    const provider = new ethers.JsonRpcProvider(
-      process.env.NEXT_PUBLIC_RPC_URL
-    );
-    const wallet = ethers.Wallet.createRandom();
-    const signer = wallet.connect(provider);
-    const contracts = new ethers.Contract(
-      CONTRACT_ADDRESS,
-      CONTRACT_ABI,
-      signer
-    );
-
-    return contracts;
+  } catch (error) {
+    console.error("Error getting Ethereum contracts:", error);
+    throw new Error("Failed to get Ethereum contracts");
   }
 };
 
@@ -291,21 +326,55 @@ export const getGroupMembersOfAnEvent = async (eventId: number) => {
   }
 };
 
-export const getEventGroupById = async (groupId: number) => {
+export const getEventGroupById = async (eventId: number) => {
   try {
     if (!window.ethereum) {
       throw new Error("Please install a browser provider");
     }
 
     const contract = await getEthereumContracts();
-    const event = contract.getEventGroup(groupId);
+    const group = await contract.getEventGroup(eventId);
 
-    if (!event) {
+    if (!group) {
       console.log("No group with the id found");
       return undefined;
     }
 
-    return event;
+    // Fetch user credentials for each member
+    const membersPromises = (group[4] || []).map(async (mb: any) => {
+      const user = await getUser(String(mb[0]));
+      return {
+        timestamp: Number(mb[1]),
+        ...user,
+      };
+    });
+
+    // // Fetch user credentials for each sender
+    const senderPromises = (group[5] || []).map(async (sd: any) => {
+      const user = await getUser(String(sd[0]));
+      return {
+        sender: String(sd[0]),
+        email: String(sd[1]),
+        content: String(sd[2]),
+        timestamp: Number(sd[3]),
+        ...user,
+      };
+    });
+
+    // Resolve promises
+    const members = await Promise.all(membersPromises);
+    const messages = await Promise.all(senderPromises);
+
+    const redefinedGroup = {
+      eventId: Number(group[0]),
+      title: String(ethers.decodeBytes32String(group[1])),
+      imageUrl: String(group[2]),
+      description: String(group[3]),
+      members: members,
+      messages: messages,
+    };
+
+    return redefinedGroup;
   } catch (error) {
     reportError(error);
     throw error;
@@ -427,7 +496,7 @@ export const getAllGroupMessages = async (groupId: number) => {
     }
 
     const contract = await getEthereumContracts();
-    const groupMessages = await contract.getGroupMessages(groupId);
+    const groupMessages = await contract.getGroupMessages(Number(groupId));
 
     if (!groupMessages) {
       console.log("No groups found");
@@ -439,7 +508,7 @@ export const getAllGroupMessages = async (groupId: number) => {
         const structuredMessage: IMessage = {
           sender: String(message[0]),
           email: String(message[1]),
-          message: String(message[2]),
+          content: String(message[2]),
           timestamp: Number(message[3]),
         };
 
@@ -453,6 +522,28 @@ export const getAllGroupMessages = async (groupId: number) => {
     );
 
     return redefinedGroupMessages;
+  } catch (error) {
+    reportError(error);
+    throw error;
+  }
+};
+
+export const sendMessage = async (groupId: number, msg: string) => {
+  try {
+    if (!window.ethereum) {
+      throw new Error("Please install a browser provider");
+    }
+
+    const contract = await getEthereumContracts();
+    const message = await contract.groupChat(Number(groupId), String(msg));
+
+    const result = await message.wait();
+
+    if (!result.status) {
+      return { success: false };
+    } else {
+      return { success: true };
+    }
   } catch (error) {
     reportError(error);
     throw error;

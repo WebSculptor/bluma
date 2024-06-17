@@ -41,7 +41,7 @@ export default function RootPage() {
           autoPlay
           loop
           muted
-          className="size-full"
+          className="size-full select-none pointer-events-none"
           src="/assets/landing.webm"
         />
       </div>

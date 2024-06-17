@@ -38,7 +38,7 @@ export default function RootLayout({ children }: ILayout) {
 
   return (
     <>
-      <main className="flex-1 pt-8 pb-16">{children}</main>
+      <main className="flex-1 pt-8 pb-16 px-4 md:px-0">{children}</main>
       <Footer />
     </>
   );

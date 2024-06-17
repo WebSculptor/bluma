@@ -81,7 +81,10 @@ export default function EventCard(event: IEvent) {
                   }`}
                 />
               </span>
-              By <b>{shortenAddress(owner)}</b>
+              By{" "}
+              <b>
+                {credentials?.address === owner ? "You" : shortenAddress(owner)}
+              </b>
             </div>
 
             <p>

@@ -17,15 +17,13 @@ import { useGlobalContext } from "@/providers/global-provider";
 
 export function LogOutModal() {
   const router = useRouter();
-
   const { disconnect } = useDisconnect();
-  const { setCredentials, setIsAuthenticated } = useGlobalContext();
+  const { setCredentials } = useGlobalContext();
 
   const signOut = async () => {
     await disconnect();
-    router.push("/sign-in");
     setCredentials(undefined);
-    setIsAuthenticated(false);
+    router.push("/sign-in");
   };
 
   return (
@@ -39,8 +37,8 @@ export function LogOutModal() {
             Are you sure you want to sign out?
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Logging out means you wont have access to use the dapp untill you
-            sign back in, would you like to continue?
+            Logging out means you won&apos;t have access to use the dapp until
+            you sign back in. Would you like to continue?
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
