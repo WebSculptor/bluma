@@ -11,7 +11,6 @@ export default function ProfilePage() {
           body: "Transaction has been confirmed, your account has been created!",
           icon: "/assets/logo.png",
           silent: false,
-          vibrate: [200, 100, 200],
         });
       }
     });

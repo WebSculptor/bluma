@@ -224,7 +224,6 @@ export const browserNotification = (title: string, description: string) => {
         body: description,
         icon: "/assets/logo.png",
         silent: false,
-        vibrate: [200, 100, 200],
       });
     }
   });
