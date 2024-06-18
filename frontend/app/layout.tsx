@@ -42,8 +42,8 @@ export default function RootLayout({
           fontSans.variable
         )}
       >
-        <Analytics />
         <GlobalSession>
+          <Analytics />
           <div className="flex-1 flex flex-col">
             <Header />
             <MaxWrapper className="flex-1 flex flex-col">{children}</MaxWrapper>
