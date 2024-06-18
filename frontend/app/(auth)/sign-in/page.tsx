@@ -15,7 +15,7 @@ import { createAvatar } from "@dicebear/core";
 import { loreleiNeutral } from "@dicebear/collection";
 import { authSchema, otpSchema } from "@/lib/validators";
 import { toast } from "sonner";
-import { Authenticating } from "@/constants";
+import { Authenticating, site } from "@/constants";
 import { useState } from "react";
 import { base64ToBlob, blobToFile, uploadBannerToPinata } from "@/lib/utils";
 
@@ -228,7 +228,7 @@ const EmailForm = ({
         </div>
 
         <h1 className="mt-3 text-lg md:text-[22px] font-bold">
-          Welcome to Luma
+          Welcome to {site.name}
         </h1>
         <p className="text-xs md:text-sm opacity-75">
           Please sign in or sign up below.
