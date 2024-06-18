@@ -11,21 +11,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useDisconnect, useWeb3Modal } from "@web3modal/ethers/react";
 import { useRouter } from "next/navigation";
 import { useGlobalContext } from "@/providers/global-provider";
 
 export function LogOutModal() {
-  const router = useRouter();
-  const { disconnect } = useDisconnect();
-  const { setCredentials, setIsAuthenticated } = useGlobalContext();
-
-  const signOut = async () => {
-    await disconnect();
-    setCredentials(undefined);
-    setIsAuthenticated(false);
-    router.push("/sign-in");
-  };
+  const { signOut } = useGlobalContext();
 
   return (
     <AlertDialog>
@@ -44,7 +34,9 @@ export function LogOutModal() {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={signOut}>Proceed</AlertDialogAction>
+          <AlertDialogAction onClick={async () => signOut()}>
+            Proceed
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

@@ -14,6 +14,7 @@ interface IUserCredentials {
   avatar: string;
   isRegistered?: boolean;
   balance?: number;
+  createdAt?: any;
 }
 
 interface ITicket {
@@ -86,10 +87,11 @@ interface IMessage {
 interface IGlobalContextProvider {
   isAuthenticated: boolean;
   setIsAuthenticated: React.Dispatch<React.SetStateAction<boolean>>;
-  getRegisteredUser: (address: string) => Promise<void>;
+  fetchUser: () => void;
   isFetchingUser: boolean;
   credentials: IUserCredentials | undefined;
   setCredentials: React.Dispatch<
     React.SetStateAction<IUserCredentials | undefined>
   >;
+  signOut: () => Promise<void>;
 }

@@ -5,7 +5,6 @@ import LoadingScreen from "@/components/shared/loading-screen";
 import { useGlobalContext } from "@/providers/global-provider";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { toast } from "sonner";
 
 export default function RootLayout({ children }: ILayout) {
   const router = useRouter();
@@ -17,9 +16,9 @@ export default function RootLayout({ children }: ILayout) {
     }
   }, [credentials, router]);
 
-  // if (isFetchingUser) {
-  //   return <LoadingScreen text="Please wait..." />;
-  // }
+  if (isFetchingUser) {
+    return <LoadingScreen />;
+  }
 
   return (
     <>

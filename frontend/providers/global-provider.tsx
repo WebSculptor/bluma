@@ -9,9 +9,12 @@ import React, {
 } from "react";
 import NextTopLoader from "nextjs-toploader";
 import { Toaster } from "@/components/ui/sonner";
-import { checkIfUserIsRegistered, getUser } from "@/services";
-import { useWeb3ModalAccount } from "@web3modal/ethers/react";
-import { useRouter } from "next/navigation";
+import { firebaseAuth, firestore } from "@/config/firbase";
+import { doc, getDoc } from "firebase/firestore";
+import { Timestamp } from "firebase/firestore";
+import { signOut as firebaseSignOut } from "firebase/auth";
+import { useDisconnect } from "@web3modal/ethers/react";
+import { toast } from "sonner";
 
 // Create Context
 const GlobalContext = React.createContext<IGlobalContextProvider | undefined>(
@@ -19,57 +22,83 @@ const GlobalContext = React.createContext<IGlobalContextProvider | undefined>(
 );
 
 export default function GlobalContextProvider({ children }: ILayout) {
-  const { address } = useWeb3ModalAccount();
+  const { disconnect } = useDisconnect();
+
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isFetchingUser, setIsFetchingUser] = useState<boolean>(false);
   const [credentials, setCredentials] = useState<
     IUserCredentials | undefined
   >();
 
-  const getRegisteredUser = useCallback(async (address: string) => {
+  const getRegisteredUser = useCallback(async () => {
+    return new Promise((resolve, reject) => {
+      const unsubscribe = firebaseAuth.onAuthStateChanged((user) => {
+        unsubscribe();
+        if (user) {
+          resolve(user);
+        } else {
+          reject(new Error("No user is logged in"));
+        }
+      });
+    });
+  }, []);
+
+  const fetchUser = async () => {
     setIsFetchingUser(true);
     try {
-      const isRegistered: boolean = await checkIfUserIsRegistered(address);
-      if (isRegistered) {
-        const user: IUserCredentials | undefined = await getUser(address);
-        setCredentials(user);
-        setIsAuthenticated(true);
-      } else {
-        setIsAuthenticated(false);
-        setCredentials(undefined);
+      const user: any = await getRegisteredUser();
+      if (user) {
+        const userDocRef = doc(firestore, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const data: any = userDoc.data();
+          if (data.createdAt instanceof Timestamp) {
+            data.createdAt = data.createdAt.toDate().toLocaleString();
+          }
+          setCredentials(data);
+          setIsAuthenticated(true);
+        } else {
+          console.error("No user data found in Firestore");
+          setIsAuthenticated(false);
+        }
       }
-    } catch (error) {
-      console.error("Error fetching registered user:", error);
-      setIsAuthenticated(false);
+    } catch (error: any) {
+      console.error("Can't fetch user:", error);
     } finally {
       setIsFetchingUser(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
-    const fetchUser = async () => {
-      if (!isFetchingUser && address) {
-        await getRegisteredUser(address);
-      }
-    };
-
     fetchUser();
-  }, [address, isFetchingUser, getRegisteredUser]);
+  }, [getRegisteredUser]);
 
   useEffect(() => {
     Notification.requestPermission();
   }, []);
 
+  const signOut = async () => {
+    try {
+      await firebaseSignOut(firebaseAuth);
+      setIsAuthenticated(false);
+      setCredentials(undefined);
+      toast.success("Signed out successfully");
+    } catch (error: any) {
+      console.error("Sign out error:", error);
+    }
+  };
+
   const propsValue = useMemo(
     () => ({
       isAuthenticated,
       setIsAuthenticated,
-      getRegisteredUser,
       isFetchingUser,
       credentials,
       setCredentials,
+      signOut,
+      fetchUser,
     }),
-    [isAuthenticated, isFetchingUser, credentials, getRegisteredUser]
+    [isAuthenticated, isFetchingUser, credentials]
   );
 
   return (

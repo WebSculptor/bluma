@@ -87,7 +87,7 @@ export const getUser = async (
 
 export const createAccount = async (
   credentials: IUserCredentials
-): Promise<void> => {
+): Promise<IUserCredentials> => {
   if (!ethereum) {
     reportError("Please install a browser provider");
     return Promise.reject(new Error("Browser provider not installed"));

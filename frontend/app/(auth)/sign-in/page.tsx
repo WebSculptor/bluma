@@ -1,13 +1,19 @@
 "use client";
 
 //? OTHER IMPORT
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useWeb3Modal, useWeb3ModalAccount } from "@web3modal/ethers/react";
 import { createAvatar } from "@dicebear/core";
 import { loreleiNeutral } from "@dicebear/collection";
-import { authSchema } from "@/lib/validators";
+import { authSchema, otpSchema } from "@/lib/validators";
 import { toast } from "sonner";
 import { Authenticating } from "@/constants";
 import { useState } from "react";
@@ -26,89 +32,177 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 //? ICONS IMPORT
-import { Asterisk, Loader, ScanFace } from "lucide-react";
+import { Asterisk, FileDigit, Loader, ScanFace } from "lucide-react";
 import { IoWalletOutline } from "react-icons/io5";
 import Image from "next/image";
-import { createAccount } from "@/services";
+import { createAccount, getUser } from "@/services";
 import { useGlobalContext } from "@/providers/global-provider";
 import { useRouter } from "next/navigation";
+import { signInWithCustomToken } from "firebase/auth";
+import { firebaseAuth } from "@/config/firbase";
 
 export default function SignInPage() {
   const router = useRouter();
 
   const { address, isConnected } = useWeb3ModalAccount();
+  const { STOP } = Authenticating;
+
+  const [isRegistering, setIsRegistering] = useState<string | boolean>(STOP);
+  const [userCred, setUserCred] = useState<IUserCredentials | undefined>(
+    undefined
+  );
+  const [hasOTPBeenSent, setHasOTPBeenSent] = useState(false);
+
+  const formProps: any = {
+    router,
+    isRegistering,
+    setIsRegistering,
+    address,
+    isConnected,
+    setHasOTPBeenSent,
+    setUserCred,
+    userCred,
+  };
+
+  return hasOTPBeenSent ? (
+    <OtpForm {...formProps} />
+  ) : (
+    <EmailForm {...formProps} />
+  );
+}
+
+const EmailForm = ({
+  isConnected,
+  address,
+  isRegistering,
+  isAuthenticated,
+  setIsRegistering,
+  setHasOTPBeenSent,
+  setUserCred,
+}: {
+  isConnected: boolean;
+  address: string;
+  isRegistering: string | boolean;
+  isAuthenticated: boolean;
+  setIsRegistering: any;
+  setHasOTPBeenSent: any;
+  setUserCred: any;
+}) => {
   const { open } = useWeb3Modal();
 
   const { STOP, START, GENERATING } = Authenticating;
 
-  const { isAuthenticated } = useGlobalContext();
-
-  const [isRegistering, setIsRegistering] = useState<string | boolean>(STOP);
   const [userAvatar, setUserAvatar] = useState("");
 
-  const form = useForm<z.infer<typeof authSchema>>({
+  const authenticationForm = useForm<z.infer<typeof authSchema>>({
     resolver: zodResolver(authSchema),
     defaultValues: {
       email: "",
     },
   });
 
-  async function onSubmit(values: z.infer<typeof authSchema>) {
+  async function handleAuthentication(values: z.infer<typeof authSchema>) {
     if (!address) {
       return toast.error("Please connect your wallet");
     }
     setIsRegistering(START);
     const avatar = createAvatar(loreleiNeutral, {
-      seed: `${address + values.email}`,
+      seed: `${address}`,
     });
 
     const png = await avatar.png().toDataUri();
 
     try {
-      // Extract the content type from the data URI
-      const contentType = png?.match(/data:(.*);base64,/)?.[1];
-
-      // Convert the base64 data URI to Blob
-      const blob = base64ToBlob(png, contentType);
-
-      // Convert the Blob to File
-      const file = blobToFile(blob, "avatar.png");
-
-      // Upload the File to Pinata
-      setIsRegistering(GENERATING);
-      const fileUrl = await uploadBannerToPinata(file);
-      toast.success("Avatar created successfully! 🎉");
-
-      const refinedValues = {
-        address: `${address}`,
-        email: values.email,
-        avatar: fileUrl,
-      };
-
-      setUserAvatar(refinedValues.avatar);
       setIsRegistering(START);
+      const checkForUser = await getUser(`${address}`);
 
-      new Promise<IUserCredentials>((resolve, reject) => {
-        createAccount(refinedValues)
-          .then((tx) => {
-            console.log(tx);
-            if (tx !== undefined) {
-              toast.success("Account created successfully! 🎉");
-              setTimeout(() => {
-                toast.loading("Redirecting, please hold...");
+      if (!checkForUser) {
+        console.log("NO USER FOUND");
+        console.log("CREATING ONE...");
+        const contentType = png?.match(/data:(.*);base64,/)?.[1];
+        const blob = base64ToBlob(png, contentType);
+        const file = blobToFile(blob, "avatar.png");
 
-                router.push("/home");
-                resolve(tx);
-              }, 2000);
-            }
-          })
-          .catch((error) => {
-            reject(error);
-          });
-      });
+        setIsRegistering(GENERATING);
+        const fileUrl = await uploadBannerToPinata(file);
+        toast.success("Avatar created successfully! 🎉");
+
+        const refinedValues = {
+          address: `${address}`,
+          email: values.email,
+          avatar: fileUrl,
+        };
+
+        setUserAvatar(refinedValues.avatar);
+        setIsRegistering(START);
+
+        const userCredentials: IUserCredentials = await createAccount(
+          refinedValues
+        );
+
+        if (userCredentials) {
+          setUserCred(refinedValues);
+
+          const otpSent = await sendOTP(
+            refinedValues.email,
+            refinedValues.address,
+            refinedValues.avatar
+          );
+
+          if (otpSent) {
+            setHasOTPBeenSent(true);
+          } else {
+            setHasOTPBeenSent(false);
+          }
+        }
+      } else {
+        setUserCred(checkForUser);
+
+        const otpSent = await sendOTP(
+          checkForUser.email,
+          checkForUser.address,
+          checkForUser.avatar
+        );
+
+        if (otpSent) {
+          setHasOTPBeenSent(true);
+        } else {
+          setHasOTPBeenSent(false);
+        }
+      }
     } catch (error) {
       console.error("Error processing avatar upload:", error);
+    } finally {
       setIsRegistering(STOP);
+    }
+  }
+
+  async function sendOTP(email: string, address: string, avatar: string) {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_RENDER_ENDPOINT}/send-otp`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, address, avatar }),
+        }
+      );
+
+      const data = await response.json();
+      if (response.ok) {
+        toast.success("OTP sent to your email");
+        return true;
+      } else {
+        toast.error("Failed to send OTP", {
+          description: data.message,
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+      toast.error("Error sending OTP");
     }
   }
 
@@ -140,8 +234,10 @@ export default function SignInPage() {
           Please sign in or sign up below.
         </p>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+        <Form {...authenticationForm}>
+          <form
+            onSubmit={authenticationForm.handleSubmit(handleAuthentication)}
+          >
             <FormField
               disabled={
                 !isConnected ||
@@ -149,7 +245,7 @@ export default function SignInPage() {
                 isRegistering !== STOP ||
                 isAuthenticated
               }
-              control={form.control}
+              control={authenticationForm.control}
               name="email"
               render={({ field }) => (
                 <FormItem className="w-full mt-4">
@@ -176,7 +272,8 @@ export default function SignInPage() {
                 !address ||
                 isRegistering !== STOP ||
                 isAuthenticated
-              }>
+              }
+            >
               {isRegistering === START ? (
                 <>
                   <Loader size={16} className="animate-spin mr-2" />
@@ -200,11 +297,177 @@ export default function SignInPage() {
           variant="secondary"
           type="button"
           disabled={isConnected || isRegistering !== STOP}
-          onClick={async () => await open()}>
+          onClick={async () => await open()}
+        >
           <IoWalletOutline size={16} className="mr-2" />{" "}
           {isConnected ? "Wallet Connected" : "Connect Wallet"}
         </Button>
       </div>
     </div>
   );
-}
+};
+
+const OtpForm = ({
+  router,
+  isConnected,
+  address,
+  isRegistering,
+  setIsRegistering,
+  isAuthenticated,
+  userCred,
+}: {
+  router: any;
+  isConnected: boolean;
+  address: string;
+  isRegistering: string | boolean;
+  setIsRegistering: any;
+  isAuthenticated: boolean;
+  userCred: IUserCredentials | undefined;
+}) => {
+  const { fetchUser } = useGlobalContext();
+  const { STOP, START } = Authenticating;
+
+  const verificationForm = useForm<z.infer<typeof otpSchema>>({
+    resolver: zodResolver(otpSchema),
+    defaultValues: {
+      pin: "",
+    },
+  });
+
+  async function handleVerification(values: z.infer<typeof otpSchema>) {
+    setIsRegistering(START);
+    try {
+      if (userCred) {
+        const result = await verifyOTP(userCred?.email, values?.pin);
+        if (result.user) {
+          fetchUser();
+          router.push("/home");
+        } else {
+          setIsRegistering(STOP);
+        }
+      } else {
+        setIsRegistering(STOP);
+        console.log("Something went wrong!!!!!");
+      }
+    } catch (error) {
+      console.error("Error verifying OTP:", error);
+      toast.error("Error verifying OTP");
+      setIsRegistering(STOP);
+    }
+  }
+
+  async function verifyOTP(email: string, otp: string) {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_RENDER_ENDPOINT}/verify-otp`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, otp }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.token) {
+        await signInWithCustomToken(firebaseAuth, data.token);
+        toast.success("Successfully signed in! 🎉");
+        return data;
+      } else {
+        console.error("Verification failed:", data.message);
+        return { error: data.message };
+      }
+    } catch (error) {
+      console.error("Error verifying OTP:", error);
+      toast.error("Error verifying OTP");
+    }
+  }
+
+  return (
+    <div className="max-w-[360px] w-full border rounded-[20px] backdrop-blur-3xl bg-secondary/30 flex flex-col">
+      <div className="px-6 py-5 border-b">
+        <div className="w-full">
+          <div className="rounded-full w-16 h-16 bg-secondary/60 flex items-center justify-center relative">
+            <FileDigit size={36} className="text-muted-foreground" />
+          </div>
+        </div>
+
+        <h1 className="mt-3 text-lg md:text-[22px] font-bold">
+          OTP Verification
+        </h1>
+        <p className="text-xs md:text-sm opacity-75">
+          Enter one-time password sent to your email
+        </p>
+
+        <Form {...verificationForm}>
+          <form onSubmit={verificationForm.handleSubmit(handleVerification)}>
+            <FormField
+              disabled={
+                !isConnected ||
+                !address ||
+                isRegistering !== STOP ||
+                isAuthenticated
+              }
+              control={verificationForm.control}
+              name="pin"
+              render={({ field }) => (
+                <FormItem className="w-full mt-4">
+                  <FormControl>
+                    <InputOTP maxLength={6} {...field}>
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                      </InputOTPGroup>
+                      <InputOTPSeparator />
+                      <InputOTPGroup>
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button
+              type="submit"
+              className="w-full mt-4"
+              disabled={
+                !isConnected ||
+                !address ||
+                isRegistering !== STOP ||
+                isAuthenticated
+              }
+            >
+              {isRegistering === START ? (
+                <>
+                  <Loader size={16} className="animate-spin mr-2" />
+                  Verifying...
+                </>
+              ) : (
+                "Verify OTP"
+              )}
+            </Button>
+          </form>
+        </Form>
+      </div>
+      <div className="py-4 px-6 flex flex-col">
+        <Button
+          className="w-full h-10"
+          variant="secondary"
+          type="button"
+          disabled={isConnected || isRegistering !== STOP}
+          onClick={async () => await open()}
+        >
+          <IoWalletOutline size={16} className="mr-2" />{" "}
+          {isConnected ? "Wallet Connected" : "Connect Wallet"}
+        </Button>
+      </div>
+    </div>
+  );
+};

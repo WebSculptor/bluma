@@ -11,13 +11,13 @@ export default function AuthLayout({ children }: ILayout) {
 
   useEffect(() => {
     if (credentials) {
-      router.back();
+      router.push("/home");
     }
   }, [credentials, router]);
 
-  // if (isFetchingUser) {
-  //   return <LoadingScreen text="Verifying your credentials, please wait..." />;
-  // }
+  if (isFetchingUser) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="flex justify-center flex-col flex-1 items-center">

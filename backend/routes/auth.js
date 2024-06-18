@@ -1,9 +1,12 @@
 const express = require("express");
 const nodemailer = require("nodemailer");
+const cors = require("cors");
+
 const { email: emailConfig } = require("../config");
 const { admin, db } = require("../database/firebaseAdmin");
 
 const router = express.Router();
+router.use(cors());
 
 // In-memory store for OTPs (you can replace this with a database)
 const otpStore = {};
@@ -21,9 +24,9 @@ const transporter = nodemailer.createTransport({
 
 // Route to handle OTP requests
 router.post("/send-otp", async (req, res) => {
-  const { email, address, avatar, isSignIn } = req.body;
+  const { email, address, avatar } = req.body;
 
-  if (!email || (!isSignIn && (!address || !avatar))) {
+  if (!email || !address || !avatar) {
     return res
       .status(400)
       .json({ message: "Email, wallet address, and avatar are required" });
@@ -35,9 +38,8 @@ router.post("/send-otp", async (req, res) => {
     otp,
     address,
     avatar,
-    isSignIn,
     expires: Date.now() + 10 * 60 * 1000,
-  }; // OTP expires in 10 minutes
+  };
 
   // Send the OTP via email
   const mailOptions = {
@@ -45,29 +47,25 @@ router.post("/send-otp", async (req, res) => {
     to: email,
     subject: "Your OTP Code",
     html: `
-        <html>
- <head>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
- </head>
-<body style="font-family: Inter, sans-serif;
-  font-optical-sizing: auto;">
-
-<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #f7fafc; padding: 16px;">
-  <div style="background-color: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); max-width: 28rem; width: 100%;">
-    <h2 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 16px;">OTP Verification</h2>
-    <p style="color: #4a5568; margin-bottom: 16px;">
-      Please enter this confirmation code to continue:
-    </p>
-    <div style="background-color: #f7fafc; font-size: 2.5rem; font-weight: bold; text-align: center; padding: 24px 16px; margin-bottom: 16px;">${otp}</div>
-    <p style="color: #4a5568; margin-bottom: 10px;">Use the code to confirm your email.</p>
-    <p style="color: #4a5568; font-size: 0.875rem; margin-bottom: 16px;">If you didn't create an account in Miro, please ignore this message.</p>
-  </div>
-</div>
- </body>
-</html>
-      `,
+      <html>
+        <head>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+        </head>
+        <body style="font-family: Inter, sans-serif; font-optical-sizing: auto;">
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #f7fafc; padding: 16px;">
+            <div style="background-color: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); max-width: 28rem; width: 100%;">
+              <h2 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 16px;">OTP Verification</h2>
+              <p style="color: #4a5568; margin-bottom: 16px;">Please enter this confirmation code to continue:</p>
+              <div style="background-color: #f7fafc; font-size: 2.5rem; font-weight: bold; text-align: center; padding: 24px 16px; margin-bottom: 16px;">${otp}</div>
+              <p style="color: #4a5568; margin-bottom: 10px;">Use the code to confirm your email.</p>
+              <p style="color: #4a5568; font-size: 0.875rem; margin-bottom: 16px;">If you didn't create an account, please ignore this message.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
   };
 
   try {
@@ -103,36 +101,40 @@ router.post("/verify-otp", async (req, res) => {
   }
 
   // OTP is valid
-  const { address, avatar, isSignIn } = storedOtpData;
+  const { address, avatar } = storedOtpData;
 
   try {
     let userRecord;
 
-    if (isSignIn) {
-      // Sign in the user
+    // Check if user already exists in Firebase Auth
+    try {
       userRecord = await admin.auth().getUserByEmail(email);
-      if (!userRecord) {
-        return res.status(400).json({ message: "User not found" });
-      }
-    } else {
-      // Register user in Firebase Auth and Firestore
-      userRecord = await admin.auth().createUser({
-        email,
-        emailVerified: true,
-      });
+    } catch (getUserError) {
+      // If user does not exist, createUser will handle it
+      if (getUserError.code === "auth/user-not-found") {
+        userRecord = await admin.auth().createUser({
+          email,
+          emailVerified: true,
+        });
 
-      await db.collection("users").doc(userRecord.uid).set({
-        email,
-        address,
-        avatar,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+        await db.collection("users").doc(userRecord.uid).set({
+          email,
+          address,
+          avatar,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } else {
+        throw getUserError; // Propagate other errors
+      }
     }
+
+    const customToken = await admin.auth().createCustomToken(userRecord.uid);
 
     delete otpStore[email]; // Remove OTP after successful verification
 
     res.status(200).json({
       message: "OTP verified successfully",
+      token: customToken,
       user: { email, address, avatar },
     });
   } catch (error) {

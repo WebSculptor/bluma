@@ -4,6 +4,12 @@ export const authSchema = z.object({
   email: z.string().min(3),
 });
 
+export const otpSchema = z.object({
+  pin: z.string().min(6, {
+    message: "One-time password must be 6 characters.",
+  }),
+});
+
 export const createEventSchema = z.object({
   title: z
     .string()

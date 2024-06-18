@@ -1,6 +1,6 @@
 require("dotenv").config();
 const express = require("express");
-const connectDB = require("./database/firebaseAdmin");
+require("./database/firebaseAdmin");
 const authRoutes = require("./routes/auth");
 
 const app = express();
