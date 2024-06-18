@@ -1,0 +1,7 @@
+{
+  "/(luma)/home/page": "app/(luma)/home/page.js",
+  "/(auth)/sign-in/page": "app/(auth)/sign-in/page.js",
+  "/(luma)/profile/page": "app/(luma)/profile/page.js",
+  "/(luma)/create/page": "app/(luma)/create/page.js",
+  "/(landing)/(root)/page": "app/(landing)/(root)/page.js"
+}

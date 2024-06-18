@@ -1,0 +1,913 @@
+[
+  {
+    "type": "function",
+    "name": "UPGRADE_INTERFACE_VERSION",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "string", "internalType": "string" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "checkContractBalance",
+    "inputs": [],
+    "outputs": [
+      { "name": "bal_", "type": "uint256", "internalType": "uint256" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "checkUserBalance",
+    "inputs": [
+      { "name": "_addr", "type": "address", "internalType": "address" }
+    ],
+    "outputs": [
+      { "name": "bal_", "type": "uint256", "internalType": "uint256" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "createAccount",
+    "inputs": [
+      { "name": "_email", "type": "string", "internalType": "string" },
+      { "name": "_addr", "type": "address", "internalType": "address" },
+      { "name": "_avatar", "type": "string", "internalType": "string" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "createEvent",
+    "inputs": [
+      { "name": "_title", "type": "bytes32", "internalType": "bytes32" },
+      { "name": "_imageUrl", "type": "string", "internalType": "string" },
+      { "name": "_description", "type": "string", "internalType": "string" },
+      { "name": "_location", "type": "string", "internalType": "string" },
+      { "name": "_capacity", "type": "uint32", "internalType": "uint32" },
+      {
+        "name": "_regStartTime",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      { "name": "_regEndTime", "type": "uint256", "internalType": "uint256" },
+      {
+        "name": "_eventStartTime",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_eventEndTime",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      { "name": "_ticketPrice", "type": "uint96", "internalType": "uint96" },
+      { "name": "_isEventPaid", "type": "bool", "internalType": "bool" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getAllEventGroups",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "group_",
+        "type": "tuple[]",
+        "internalType": "struct BlumaProtocol.EventGroup[]",
+        "components": [
+          { "name": "eventId", "type": "uint32", "internalType": "uint32" },
+          { "name": "title", "type": "bytes32", "internalType": "bytes32" },
+          { "name": "imageUrl", "type": "string", "internalType": "string" },
+          {
+            "name": "description",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "members",
+            "type": "tuple[]",
+            "internalType": "struct BlumaProtocol.Member[]",
+            "components": [
+              {
+                "name": "user",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "joinTime",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ]
+          },
+          {
+            "name": "messages",
+            "type": "tuple[]",
+            "internalType": "struct BlumaProtocol.Message[]",
+            "components": [
+              {
+                "name": "sender",
+                "type": "address",
+                "internalType": "address"
+              },
+              { "name": "email", "type": "string", "internalType": "string" },
+              { "name": "text", "type": "string", "internalType": "string" },
+              {
+                "name": "timestamp",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getAllEvents",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "events_",
+        "type": "tuple[]",
+        "internalType": "struct BlumaProtocol.Event[]",
+        "components": [
+          { "name": "eventId", "type": "uint32", "internalType": "uint32" },
+          { "name": "title", "type": "bytes32", "internalType": "bytes32" },
+          { "name": "imageUrl", "type": "string", "internalType": "string" },
+          { "name": "location", "type": "string", "internalType": "string" },
+          {
+            "name": "description",
+            "type": "string",
+            "internalType": "string"
+          },
+          { "name": "creator", "type": "address", "internalType": "address" },
+          { "name": "seats", "type": "uint32", "internalType": "uint32" },
+          { "name": "capacity", "type": "uint32", "internalType": "uint32" },
+          {
+            "name": "regStartTime",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "regEndTime",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "regStatus",
+            "type": "uint8",
+            "internalType": "enum BlumaProtocol.RegStatus"
+          },
+          {
+            "name": "eventStatus",
+            "type": "uint8",
+            "internalType": "enum BlumaProtocol.EventStatus"
+          },
+          {
+            "name": "eventType",
+            "type": "uint8",
+            "internalType": "enum BlumaProtocol.EventType"
+          },
+          {
+            "name": "eventStartTime",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "eventEndTime",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "ticketPrice",
+            "type": "uint96",
+            "internalType": "uint96"
+          },
+          {
+            "name": "totalSales",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "createdAt",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          { "name": "isCreatorPaid", "type": "bool", "internalType": "bool" }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getAllTickets",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "_tickets",
+        "type": "tuple[]",
+        "internalType": "struct BlumaProtocol.Ticket[]",
+        "components": [
+          { "name": "ticketId", "type": "uint32", "internalType": "uint32" },
+          { "name": "eventId", "type": "uint32", "internalType": "uint32" },
+          { "name": "owner", "type": "address", "internalType": "address" },
+          {
+            "name": "ticketCost",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "purchaseTime",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "numberOfTicket",
+            "type": "uint32",
+            "internalType": "uint32"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getEventById",
+    "inputs": [
+      { "name": "_eventId", "type": "uint32", "internalType": "uint32" }
+    ],
+    "outputs": [
+      {
+        "name": "events_",
+        "type": "tuple",
+        "internalType": "struct BlumaProtocol.Event",
+        "components": [
+          { "name": "eventId", "type": "uint32", "internalType": "uint32" },
+          { "name": "title", "type": "bytes32", "internalType": "bytes32" },
+          { "name": "imageUrl", "type": "string", "internalType": "string" },
+          { "name": "location", "type": "string", "internalType": "string" },
+          {
+            "name": "description",
+            "type": "string",
+            "internalType": "string"
+          },
+          { "name": "creator", "type": "address", "internalType": "address" },
+          { "name": "seats", "type": "uint32", "internalType": "uint32" },
+          { "name": "capacity", "type": "uint32", "internalType": "uint32" },
+          {
+            "name": "regStartTime",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "regEndTime",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "regStatus",
+            "type": "uint8",
+            "internalType": "enum BlumaProtocol.RegStatus"
+          },
+          {
+            "name": "eventStatus",
+            "type": "uint8",
+            "internalType": "enum BlumaProtocol.EventStatus"
+          },
+          {
+            "name": "eventType",
+            "type": "uint8",
+            "internalType": "enum BlumaProtocol.EventType"
+          },
+          {
+            "name": "eventStartTime",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "eventEndTime",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "ticketPrice",
+            "type": "uint96",
+            "internalType": "uint96"
+          },
+          {
+            "name": "totalSales",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "createdAt",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          { "name": "isCreatorPaid", "type": "bool", "internalType": "bool" }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getEventGroup",
+    "inputs": [
+      { "name": "_groupId", "type": "uint32", "internalType": "uint32" }
+    ],
+    "outputs": [
+      {
+        "name": "group_",
+        "type": "tuple",
+        "internalType": "struct BlumaProtocol.EventGroup",
+        "components": [
+          { "name": "eventId", "type": "uint32", "internalType": "uint32" },
+          { "name": "title", "type": "bytes32", "internalType": "bytes32" },
+          { "name": "imageUrl", "type": "string", "internalType": "string" },
+          {
+            "name": "description",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "members",
+            "type": "tuple[]",
+            "internalType": "struct BlumaProtocol.Member[]",
+            "components": [
+              {
+                "name": "user",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "joinTime",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ]
+          },
+          {
+            "name": "messages",
+            "type": "tuple[]",
+            "internalType": "struct BlumaProtocol.Message[]",
+            "components": [
+              {
+                "name": "sender",
+                "type": "address",
+                "internalType": "address"
+              },
+              { "name": "email", "type": "string", "internalType": "string" },
+              { "name": "text", "type": "string", "internalType": "string" },
+              {
+                "name": "timestamp",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getGroupMembers",
+    "inputs": [
+      { "name": "_eventId", "type": "uint32", "internalType": "uint32" }
+    ],
+    "outputs": [
+      {
+        "name": "_members",
+        "type": "tuple[]",
+        "internalType": "struct BlumaProtocol.Member[]",
+        "components": [
+          { "name": "user", "type": "address", "internalType": "address" },
+          { "name": "joinTime", "type": "uint256", "internalType": "uint256" }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getGroupMessages",
+    "inputs": [
+      { "name": "_groupId", "type": "uint32", "internalType": "uint32" }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple[]",
+        "internalType": "struct BlumaProtocol.Message[]",
+        "components": [
+          { "name": "sender", "type": "address", "internalType": "address" },
+          { "name": "email", "type": "string", "internalType": "string" },
+          { "name": "text", "type": "string", "internalType": "string" },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getTicket",
+    "inputs": [
+      { "name": "_addr", "type": "address", "internalType": "address" }
+    ],
+    "outputs": [
+      {
+        "name": "_ticket",
+        "type": "tuple",
+        "internalType": "struct BlumaProtocol.Ticket",
+        "components": [
+          { "name": "ticketId", "type": "uint32", "internalType": "uint32" },
+          { "name": "eventId", "type": "uint32", "internalType": "uint32" },
+          { "name": "owner", "type": "address", "internalType": "address" },
+          {
+            "name": "ticketCost",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "purchaseTime",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "numberOfTicket",
+            "type": "uint32",
+            "internalType": "uint32"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getUser",
+    "inputs": [
+      { "name": "_addr", "type": "address", "internalType": "address" }
+    ],
+    "outputs": [
+      {
+        "name": "_user",
+        "type": "tuple",
+        "internalType": "struct BlumaProtocol.User",
+        "components": [
+          { "name": "email", "type": "string", "internalType": "string" },
+          {
+            "name": "userAddr",
+            "type": "address",
+            "internalType": "address"
+          },
+          { "name": "isRegistered", "type": "bool", "internalType": "bool" },
+          { "name": "avatar", "type": "string", "internalType": "string" },
+          { "name": "balance", "type": "uint256", "internalType": "uint256" }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "groupChat",
+    "inputs": [
+      { "name": "_groupId", "type": "uint32", "internalType": "uint32" },
+      { "name": "_text", "type": "string", "internalType": "string" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "initialize",
+    "inputs": [
+      { "name": "initialOwner", "type": "address", "internalType": "address" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "isRegistered",
+    "inputs": [
+      { "name": "_addr", "type": "address", "internalType": "address" }
+    ],
+    "outputs": [{ "name": "", "type": "bool", "internalType": "bool" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "joinGroup",
+    "inputs": [
+      { "name": "_eventId", "type": "uint32", "internalType": "uint32" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "owner",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "address", "internalType": "address" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "proxiableUUID",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "bytes32", "internalType": "bytes32" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "purchaseTicket",
+    "inputs": [
+      { "name": "_eventId", "type": "uint32", "internalType": "uint32" },
+      {
+        "name": "_numberOfTickets",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "refundFee",
+    "inputs": [
+      { "name": "_eventId", "type": "uint32", "internalType": "uint32" },
+      {
+        "name": "_numberOfTickets",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "renounceOwnership",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "transferOwnership",
+    "inputs": [
+      { "name": "newOwner", "type": "address", "internalType": "address" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "updateEventStatus",
+    "inputs": [
+      { "name": "_eventId", "type": "uint32", "internalType": "uint32" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "upgradeToAndCall",
+    "inputs": [
+      {
+        "name": "newImplementation",
+        "type": "address",
+        "internalType": "address"
+      },
+      { "name": "data", "type": "bytes", "internalType": "bytes" }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "withdrawEventFee",
+    "inputs": [
+      { "name": "_eventId", "type": "uint32", "internalType": "uint32" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "EventClosed",
+    "inputs": [
+      {
+        "name": "_eventId",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "_currentTime",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EventCreated",
+    "inputs": [
+      {
+        "name": "_totalEventsId",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "_seatNumber",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "_capacity",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "GroupCreated",
+    "inputs": [
+      {
+        "name": "_roomId",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "imageUrl",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      },
+      {
+        "name": "_title",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "GroupJoinedSuccessfully",
+    "inputs": [
+      {
+        "name": "_sender",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "_eventId",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Initialized",
+    "inputs": [
+      {
+        "name": "version",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MessageSent",
+    "inputs": [
+      {
+        "name": "sender",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "groupId",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "text",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      },
+      {
+        "name": "timestamp",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OwnershipTransferred",
+    "inputs": [
+      {
+        "name": "previousOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RefundIssued",
+    "inputs": [
+      {
+        "name": "buyer",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "_ticketId",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "_eventId",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RegistrationClose",
+    "inputs": [
+      {
+        "name": "_currentTime",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "_status",
+        "type": "uint8",
+        "indexed": true,
+        "internalType": "uint8"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "TicketPurchased",
+    "inputs": [
+      {
+        "name": "buyer",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "_eventId",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "numberOfTickets",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Upgraded",
+    "inputs": [
+      {
+        "name": "implementation",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  { "type": "error", "name": "ALREADY_PAID", "inputs": [] },
+  {
+    "type": "error",
+    "name": "AddressEmptyCode",
+    "inputs": [
+      { "name": "target", "type": "address", "internalType": "address" }
+    ]
+  },
+  { "type": "error", "name": "EMPTY_INPUT_FIELD", "inputs": [] },
+  {
+    "type": "error",
+    "name": "ERC1967InvalidImplementation",
+    "inputs": [
+      {
+        "name": "implementation",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  { "type": "error", "name": "ERC1967NonPayable", "inputs": [] },
+  { "type": "error", "name": "EVENT_NOT_CLOSED", "inputs": [] },
+  { "type": "error", "name": "FailedInnerCall", "inputs": [] },
+  { "type": "error", "name": "GROUP_ALREADY_EXISTS", "inputs": [] },
+  { "type": "error", "name": "INSUFFICIENT_BALANCE", "inputs": [] },
+  { "type": "error", "name": "INSUFFICIENT_TICKET_PURCHASED", "inputs": [] },
+  { "type": "error", "name": "INVALID_EVENT_ID", "inputs": [] },
+  { "type": "error", "name": "INVALID_ID", "inputs": [] },
+  { "type": "error", "name": "INVALID_NOT_AUTHORIZED", "inputs": [] },
+  { "type": "error", "name": "INVALID_TIME_SET", "inputs": [] },
+  { "type": "error", "name": "InvalidInitialization", "inputs": [] },
+  { "type": "error", "name": "NOT_CREATOR", "inputs": [] },
+  { "type": "error", "name": "NOT_ENOUGH_AVAILABLE_SEAT", "inputs": [] },
+  { "type": "error", "name": "NOT_OWNER", "inputs": [] },
+  { "type": "error", "name": "NOT_PAID_EVENT", "inputs": [] },
+  { "type": "error", "name": "NO_ALLOWANCE", "inputs": [] },
+  { "type": "error", "name": "NotInitializing", "inputs": [] },
+  {
+    "type": "error",
+    "name": "OwnableInvalidOwner",
+    "inputs": [
+      { "name": "owner", "type": "address", "internalType": "address" }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "OwnableUnauthorizedAccount",
+    "inputs": [
+      { "name": "account", "type": "address", "internalType": "address" }
+    ]
+  },
+  { "type": "error", "name": "REGISTRATION_CLOSE", "inputs": [] },
+  { "type": "error", "name": "REGISTRATION_NOT_OPEN", "inputs": [] },
+  { "type": "error", "name": "USER_NOT_REGISTERED", "inputs": [] },
+  { "type": "error", "name": "UUPSUnauthorizedCallContext", "inputs": [] },
+  {
+    "type": "error",
+    "name": "UUPSUnsupportedProxiableUUID",
+    "inputs": [{ "name": "slot", "type": "bytes32", "internalType": "bytes32" }]
+  }
+]
