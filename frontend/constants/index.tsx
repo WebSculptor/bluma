@@ -19,7 +19,7 @@ export const nav_links = [
 ];
 
 export const site = {
-  name: "Luma",
+  name: "Bluma",
   description: "Delightful events start here.",
   url: "",
   icon: "/assets/logo.png",
