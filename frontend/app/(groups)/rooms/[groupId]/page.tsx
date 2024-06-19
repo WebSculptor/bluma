@@ -1,16 +1,12 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { browserNotification, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useGlobalContext } from "@/providers/global-provider";
-import {
-  getAllGroupMessages,
-  getEthereumContracts,
-  getEventGroupById,
-} from "@/services";
-import Image from "next/image";
+import { getEthereumContracts, getEventGroupById } from "@/services";
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 
 export default function GroupChatPage({
   params,
@@ -32,47 +28,26 @@ export default function GroupChatPage({
     scrollToBottom();
   }, [allMessages]);
 
-  const fetchMessages = async (groupId: number) => {
+  const fetchData = async () => {
+    setIsFetchingMessages(true);
     try {
-      const group = await getEventGroupById(Number(groupId));
-      return group;
+      const data = await getEventGroupById(Number(params?.groupId));
+      setAllMessages(data?.messages);
+      setGroupMembers(data?.members);
+      console.log(data);
     } catch (error: any) {
-      console.log("SOMETHING WENT WRONG:", error);
+      console.log(error);
+    } finally {
+      setIsFetchingMessages(false);
     }
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      setIsFetchingMessages(true);
-      try {
-        const data = await fetchMessages(Number(params?.groupId));
-        setAllMessages(data?.messages);
-        setGroupMembers(data?.members);
-        console.log(data);
-      } catch (error: any) {
-        console.log(error);
-      } finally {
-        setIsFetchingMessages(false);
-      }
-    };
     fetchData();
   }, [params?.groupId]);
 
   useEffect(() => {
-    let contract: any; // Declare contract variable outside useEffect
-
-    const fetchData = async () => {
-      setIsFetchingMessages(true);
-      try {
-        const data = await fetchMessages(Number(params?.groupId));
-        setAllMessages(data?.messages);
-        console.log(data);
-      } catch (error: any) {
-        console.log(error);
-      } finally {
-        setIsFetchingMessages(false);
-      }
-    };
+    let contract: any;
     fetchData();
 
     const listenForEvent = async () => {
@@ -87,14 +62,15 @@ export default function GroupChatPage({
         try {
           // Check if the new message belongs to the current group
           if (Number(groupId) === Number(params?.groupId)) {
-            const data = await fetchMessages(Number(params?.groupId));
+            const data = await getEventGroupById(Number(params?.groupId));
+            setAllMessages(data?.messages);
+            setGroupMembers(data?.members);
             setAllMessages(data?.messages);
 
             if (sender !== credentials?.address) {
-              browserNotification(
-                "New Message",
-                `There's a new message in the ${data?.title} event room`
-              );
+              toast.info("You have a new message", {
+                description: `There's a new message in the ${data?.title} event room`,
+              });
             }
           }
         } catch (error: any) {

@@ -73,10 +73,6 @@ export default function GlobalContextProvider({ children }: ILayout) {
     fetchUser();
   }, [getRegisteredUser]);
 
-  useEffect(() => {
-    Notification.requestPermission();
-  }, []);
-
   const signOut = async () => {
     try {
       await firebaseSignOut(firebaseAuth);

@@ -10,6 +10,7 @@ node_modules
 /coverage
 
 # next.js
+.next
 /.next/
 /out/
 
@@ -37,3 +38,6 @@ serviceAccountKey.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# debugging
+code_context.txt

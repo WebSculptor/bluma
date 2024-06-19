@@ -44,6 +44,7 @@ import { firebaseAuth } from "@/config/firbase";
 export default function SignInPage() {
   const router = useRouter();
 
+  const { isAuthenticated } = useGlobalContext();
   const { address, isConnected } = useWeb3ModalAccount();
   const { STOP } = Authenticating;
 
@@ -62,6 +63,7 @@ export default function SignInPage() {
     setHasOTPBeenSent,
     setUserCred,
     userCred,
+    isAuthenticated,
   };
 
   return hasOTPBeenSent ? (
@@ -203,6 +205,7 @@ const EmailForm = ({
     } catch (error) {
       console.error("Error sending OTP:", error);
       toast.error("Error sending OTP");
+      return false;
     }
   }
 
@@ -343,6 +346,7 @@ const OtpForm = ({
           fetchUser();
           router.push("/home");
         } else {
+          console.log(result.error);
           setIsRegistering(STOP);
         }
       } else {
@@ -376,12 +380,16 @@ const OtpForm = ({
         toast.success("Successfully signed in! 🎉");
         return data;
       } else {
-        console.error("Verification failed:", data.message);
+        toast.error("Verification failed", {
+          description: data.message,
+        });
+        console.error("Verification failed:", data);
         return { error: data.message };
       }
     } catch (error) {
       console.error("Error verifying OTP:", error);
       toast.error("Error verifying OTP");
+      return { error: error };
     }
   }
 
