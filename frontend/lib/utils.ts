@@ -216,18 +216,3 @@ export const timestampToDatetimeLocal = (timestamp: number): string => {
 
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
-
-export const browserNotification = (title: string, description: string) => {
-  if (!("Notification" in window)) {
-    console.log("This browser does not support notifications.");
-  } else {
-    Notification.requestPermission().then((perm) => {
-      if (perm === "granted") {
-        new Notification(title, {
-          body: description,
-          icon: "/assets/logo.png",
-        });
-      }
-    });
-  }
-};

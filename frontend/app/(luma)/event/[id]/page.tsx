@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { EventStatus, EventType, RegStatus } from "@/enums";
 import {
-  browserNotification,
   calculateDateDifference,
   formatDate,
   getExpiryDate,
@@ -144,17 +143,6 @@ export default function EventDetails({ params }: { params: { id: number } }) {
         "TicketPurchased",
         async (buyer, _eventId, numberOfTickets) => {
           await fetchEventData(Number(params?.id));
-          if (event?.eventType === "FREE") {
-            browserNotification(
-              `${numberOfTickets} ticket jained`,
-              `Congratulations, You now have ${numberOfTickets} tickets for the ${event?.title} event!`
-            );
-          } else {
-            browserNotification(
-              `${numberOfTickets} ticket purchased`,
-              `Congratulations, You now have ${numberOfTickets} tickets for the ${event?.title} event!`
-            );
-          }
         }
       );
 
@@ -206,8 +194,7 @@ export default function EventDetails({ params }: { params: { id: number } }) {
 
               <Link
                 href={`/user/${eventOwner?.address}`}
-                className="text-sm flex items-center gap-2 w-max group"
-              >
+                className="text-sm flex items-center gap-2 w-max group">
                 <span className="size-5 bg-secondary rounded-full border relative">
                   <Image
                     alt={eventOwner?.address as string}
@@ -243,8 +230,7 @@ export default function EventDetails({ params }: { params: { id: number } }) {
                 {ticketBuyers?.slice(0, 6)?.map((member) => (
                   <span
                     className="size-8 bg-secondary rounded-full relative border-4 border-background first:-ml-1 -ml-3"
-                    key={member?.email}
-                  >
+                    key={member?.email}>
                     <Image
                       alt={member?.address as string}
                       src={
@@ -312,8 +298,7 @@ export default function EventDetails({ params }: { params: { id: number } }) {
                         <Button variant="secondary" className="w-full" asChild>
                           <Link
                             className="flex items-center"
-                            href={`/rooms/${Number(event?.eventId)}`}
-                          >
+                            href={`/rooms/${Number(event?.eventId)}`}>
                             <PiWechatLogoDuotone size={16} className="mr-2" />
                             Go to Room
                           </Link>
@@ -421,8 +406,7 @@ export default function EventDetails({ params }: { params: { id: number } }) {
                   {...props}
                 />
               ),
-            }}
-          >
+            }}>
             {event?.description}
           </ReactMarkdown>
         </div>
@@ -536,8 +520,7 @@ const BuyTicketPopup = ({
               disabled={isPurchasing}
               onClick={handleSubmit}
               type="submit"
-              className="w-1/2"
-            >
+              className="w-1/2">
               {isPurchasing ? (
                 <Loader size={16} className="animate-spin" />
               ) : eventType === "FREE" ? (
@@ -614,8 +597,7 @@ const JoinGroupPopup = ({
           <Button
             className="w-full"
             onClick={handleJoiningGroup}
-            disabled={isJoining}
-          >
+            disabled={isJoining}>
             {isJoining ? (
               <>
                 <Loader size={16} className="mr-2 animate-spin" />

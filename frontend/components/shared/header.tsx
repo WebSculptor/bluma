@@ -29,16 +29,11 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
 
 export default function Header() {
   const pathname = usePathname();
-
-  const [time, setTime] = useState("");
 
   const { open } = useWeb3Modal();
 
@@ -72,7 +67,7 @@ export default function Header() {
                 className={cn(
                   "flex items-center text-muted-foreground hover:text-primary transition-colors duration-300",
                   {
-                    "text-initial hover:text-initial": isActive,
+                    "text-primary hover:text-primary": isActive,
                   }
                 )}>
                 <link.icon className="w-4 h-4 mr-1.5" />
@@ -107,12 +102,15 @@ export default function Header() {
 
             <RiSearch2Line
               size={16}
-              className="text-muted-foreground hover:text-primary transition-all cursor-pointer"
+              className="text-muted-foreground hover:text-primary transition-all cursor-pointer hidden md:flex"
             />
-            <Bell
-              size={16}
-              className="text-muted-foreground hover:text-primary transition-all cursor-pointer"
-            />
+
+            <Link href="/notifications" className="hidden md:flex">
+              <Bell
+                size={16}
+                className="text-muted-foreground hover:text-primary transition-all cursor-pointer"
+              />
+            </Link>
             <DropdownMenu>
               <DropdownMenuTrigger className="rounded-full">
                 <ProfilePicture
@@ -156,7 +154,9 @@ export default function Header() {
                     </div>
                   </Link>
                 </DropdownMenuLabel>
+
                 <DropdownMenuSeparator />
+
                 <DropdownMenuItem className="py-2 px-3 text-[13px] cursor-pointer font-medium">
                   View Profile
                 </DropdownMenuItem>
@@ -165,7 +165,22 @@ export default function Header() {
                   onClick={async () => await open()}>
                   Wallet
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="py-2 px-3 text-[13px] cursor-pointer font-medium"
+                  asChild>
+                  <Link href="/notifications">Notifications</Link>
+                </DropdownMenuItem>
+
                 <DropdownMenuSeparator />
+
+                {process.env.NEXT_PUBLIC_ADMIN_ADDRESS?.toLowerCase() ===
+                  credentials?.address.toLowerCase() && (
+                  <DropdownMenuItem
+                    className="py-2 px-3 text-[13px] cursor-pointer font-medium"
+                    asChild>
+                    <Link href="/admin/users">All Users</Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                   <LogOutModal />
                 </DropdownMenuItem>
@@ -188,7 +203,7 @@ export default function Header() {
                           className={cn(
                             "flex items-center text-muted-foreground hover:text-primary transition-colors duration-300 py-3 border-b",
                             {
-                              "text-initial hover:text-initial": isActive,
+                              "text-primary hover:text-primary": isActive,
                             }
                           )}>
                           <link.icon size={16} className="mr-2" />
@@ -201,11 +216,27 @@ export default function Header() {
                   })}
                   <SheetClose asChild>
                     <Link
-                      href="/create"
+                      href="/notifications"
                       className={cn(
                         "flex items-center text-muted-foreground hover:text-primary transition-colors duration-300 py-3 border-b",
                         {
-                          "text-initial hover:text-initial":
+                          "text-primary hover:text-primary":
+                            pathname === "/notifications",
+                        }
+                      )}>
+                      <Bell size={16} className="mr-2" />
+                      <p className="text-sm capitalize font-medium">
+                        Notifications
+                      </p>
+                    </Link>
+                  </SheetClose>
+                  <SheetClose asChild>
+                    <Link
+                      href="/create"
+                      className={cn(
+                        "flex items-center text-muted-foreground hover:text-primary transition-colors duration-300 py-3",
+                        {
+                          "text-primary hover:text-primary":
                             pathname === "/create",
                         }
                       )}>

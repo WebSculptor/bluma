@@ -13,7 +13,6 @@ import { firebaseAuth, firestore } from "@/config/firbase";
 import { doc, getDoc } from "firebase/firestore";
 import { Timestamp } from "firebase/firestore";
 import { signOut as firebaseSignOut } from "firebase/auth";
-import { useDisconnect } from "@web3modal/ethers/react";
 import { toast } from "sonner";
 
 // Create Context
@@ -22,8 +21,6 @@ const GlobalContext = React.createContext<IGlobalContextProvider | undefined>(
 );
 
 export default function GlobalContextProvider({ children }: ILayout) {
-  const { disconnect } = useDisconnect();
-
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isFetchingUser, setIsFetchingUser] = useState<boolean>(false);
   const [credentials, setCredentials] = useState<
@@ -68,6 +65,10 @@ export default function GlobalContextProvider({ children }: ILayout) {
       setIsFetchingUser(false);
     }
   };
+
+  useEffect(() => {
+    fetchUser();
+  }, []);
 
   useEffect(() => {
     fetchUser();

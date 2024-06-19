@@ -1,4 +1,4 @@
-import { Ticket, CircleUser, PencilLine } from "lucide-react";
+import { Ticket, CircleUser, PencilLine, Group } from "lucide-react";
 
 export const nav_links = [
   {
@@ -10,6 +10,11 @@ export const nav_links = [
     name: "Profile",
     icon: CircleUser,
     path: "/profile",
+  },
+  {
+    name: "Rooms",
+    icon: Group,
+    path: "/rooms",
   },
   {
     name: "What's New",
