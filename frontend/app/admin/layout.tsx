@@ -25,7 +25,7 @@ export default function AccountsLayout({ children }: ILayout) {
 
   return (
     <MaxWrapper className="flex-1 flex flex-col">
-      <div className="flex-1 flex flex-col h-full py-4 pt-12 w-full">
+      <div className="flex-1 flex flex-col h-full py-4 pt-6 md:pt-12 w-full">
         {children}
       </div>
     </MaxWrapper>

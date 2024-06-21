@@ -77,47 +77,47 @@ import { createEventSuccessEmail } from "@/services/renderNotification";
 // ) => {
 //   return (
 //     <span className={cn("flex items-center gap-2 text-sm", className)}>
-//       {location && location.includes("meet.google.com") ? (
-//         <>
-//           Google Meet
-//           <SiGooglemeet
-//             size={size ? size : 16}
-//             className="text-sm text-muted-foreground min-w-[18px]"
-//           />
-//         </>
-//       ) : location && location.includes("youtube.com") ? (
-//         <>
-//           YouTube
-//           <TbBrandYoutubeFilled
-//             size={size ? size : 16}
-//             className="text-sm text-muted-foreground min-w-[18px]"
-//           />
-//         </>
-//       ) : location && location.includes("bit.ly") ? (
-//         <>
-//           Bitly
-//           <SiBitly
-//             size={size ? size : 16}
-//             className="text-sm text-muted-foreground min-w-[18px]"
-//           />
-//         </>
-//       ) : location && location.includes("https://" || "http://") ? (
-//         <>
-//           {shouldShow ? location : "Online Location"}
-//           <HiStatusOnline
-//             size={size ? size : 16}
-//             className="text-sm text-muted-foreground min-w-[18px]"
-//           />
-//         </>
-//       ) : (
-//         <>
-//           {shouldShow ? location : "Offline Location"}
-//           <GrMapLocation
-//             size={size ? size : 16}
-//             className="text-sm text-muted-foreground min-w-[18px]"
-//           />
-//         </>
-//       )}
+// {location && location.includes("meet.google.com") ? (
+//   <>
+//     Google Meet
+//     <SiGooglemeet
+//       size={size ? size : 16}
+//       className="text-sm text-muted-foreground min-w-[18px]"
+//     />
+//   </>
+// ) : location && location.includes("youtube.com") ? (
+//   <>
+//     YouTube
+//     <TbBrandYoutubeFilled
+//       size={size ? size : 16}
+//       className="text-sm text-muted-foreground min-w-[18px]"
+//     />
+//   </>
+// ) : location && location.includes("bit.ly") ? (
+//   <>
+//     Bitly
+//     <SiBitly
+//       size={size ? size : 16}
+//       className="text-sm text-muted-foreground min-w-[18px]"
+//     />
+//   </>
+// ) : location && location.includes("https://" || "http://") ? (
+//   <>
+//     {shouldShow ? location : "Online Location"}
+//     <HiStatusOnline
+//       size={size ? size : 16}
+//       className="text-sm text-muted-foreground min-w-[18px]"
+//     />
+//   </>
+// ) : (
+//   <>
+//     {shouldShow ? location : "Offline Location"}
+//     <GrMapLocation
+//       size={size ? size : 16}
+//       className="text-sm text-muted-foreground min-w-[18px]"
+//     />
+//   </>
+// )}
 //     </span>
 //   );
 // };
@@ -727,7 +727,50 @@ export default function CreateEventPage() {
                       <p className="border-b py-3 pr-3 w-full text-sm flex items-center justify-between">
                         <span className="text-foreground">Event Location</span>
                         <span className="flex items-center text-muted-foreground">
-                          {/* {eventLocationType(field.value as string)} */}
+                          {field.value &&
+                          field.value.includes("meet.google.com") ? (
+                            <>
+                              Google Meet
+                              <SiGooglemeet
+                                size={16}
+                                className="text-sm text-muted-foreground min-w-[18px]"
+                              />
+                            </>
+                          ) : field.value &&
+                            field.value.includes("youtube.com") ? (
+                            <>
+                              YouTube
+                              <TbBrandYoutubeFilled
+                                size={16}
+                                className="text-sm text-muted-foreground min-w-[18px]"
+                              />
+                            </>
+                          ) : field.value && field.value.includes("bit.ly") ? (
+                            <>
+                              Bitly
+                              <SiBitly
+                                size={16}
+                                className="text-sm text-muted-foreground min-w-[18px]"
+                              />
+                            </>
+                          ) : field.value &&
+                            field.value.includes("https://" || "http://") ? (
+                            <>
+                              Online Location
+                              <HiStatusOnline
+                                size={16}
+                                className="text-sm text-muted-foreground min-w-[18px]"
+                              />
+                            </>
+                          ) : (
+                            <>
+                              Offline Location
+                              <GrMapLocation
+                                size={16}
+                                className="text-sm text-muted-foreground min-w-[18px]"
+                              />
+                            </>
+                          )}
                         </span>
                       </p>
                     </div>

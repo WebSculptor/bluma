@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { MdPayments } from "react-icons/md";
 import { Input } from "@/components/ui/input";
-import { AlarmClock, Loader } from "lucide-react";
+import { AlarmClock, Locate, Loader } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import LoadDetails from "@/components/shared/load-details";
 import { format } from "date-fns";
@@ -42,6 +42,10 @@ import { PiWechatLogoDuotone } from "react-icons/pi";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { useGlobalContext } from "@/providers/global-provider";
+import { SiBitly, SiGooglemeet } from "react-icons/si";
+import { TbBrandYoutubeFilled } from "react-icons/tb";
+import { HiStatusOnline } from "react-icons/hi";
+import { GrMapLocation } from "react-icons/gr";
 
 let ethereum: any;
 if (typeof window !== "undefined") ethereum = (window as any).ethereum;
@@ -63,8 +67,7 @@ export default function EventDetails({ params }: { params: { id: number } }) {
   const [hasBoughtTicket, setHasBoughtTicket] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const currentDate = new Date();
-  const endTimestamp = currentDate.getTime();
+  const [locationType, setLocationType] = useState("offline");
 
   const fetchEventData = async (eventId: number) => {
     try {
@@ -74,6 +77,18 @@ export default function EventDetails({ params }: { params: { id: number } }) {
         setEvent(event);
 
         console.log(event);
+
+        if (event?.location.includes("meet.google.com")) {
+          setLocationType("google");
+        } else if (event?.location.includes("youtube.com")) {
+          setLocationType("youtube");
+        } else if (event?.location.includes("bit.ly")) {
+          setLocationType("bitly");
+        } else if (event?.location.includes("https://" || "http://")) {
+          setLocationType("online");
+        } else {
+          setLocationType("offline");
+        }
 
         // ? GET EVENT OWNER
         const currentEventOwner = await getUser(event?.owner);
@@ -186,7 +201,7 @@ export default function EventDetails({ params }: { params: { id: number } }) {
             className="rounded-[inherit] size-full pointer-events-none"
           />
         </div>
-        <div className="flex flex-col gap-6">
+        <div className="hidden sm:flex flex-col gap-6">
           {!isAdmin && (
             <div className="flex flex-col w-full">
               <p className="text-muted-foreground text-sm font-medium mb-4 pb-2 border-b">
@@ -310,14 +325,22 @@ export default function EventDetails({ params }: { params: { id: number } }) {
                       {!hasBoughtTicket ? (
                         <BuyTicketPopup {...purchaseTicketProps} />
                       ) : hasJoinedGroup ? (
-                        <Button variant="secondary" className="w-full" asChild>
-                          <Link
-                            className="flex items-center"
-                            href={`/rooms/${Number(event?.eventId)}`}>
-                            <PiWechatLogoDuotone size={16} className="mr-2" />
-                            Go to Room
-                          </Link>
-                        </Button>
+                        <>
+                          <Button variant="secondary" className="w-full">
+                            Refund
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            className="w-full"
+                            asChild>
+                            <Link
+                              className="flex items-center"
+                              href={`/rooms/${Number(event?.eventId)}`}>
+                              <PiWechatLogoDuotone size={16} className="mr-2" />
+                              Go to Room
+                            </Link>
+                          </Button>
+                        </>
                       ) : (
                         <JoinGroupPopup {...joinGroupProps} />
                       )}
@@ -351,62 +374,82 @@ export default function EventDetails({ params }: { params: { id: number } }) {
             </div>
           )}
         </div>
-
-        <div className="flex flex-col gap-2"></div>
       </div>
 
       <div className="flex-1 h-max flex flex-col gap-4 md:gap-6">
-        <h1 className="w-full border border-x-0 text-2xl sm:text-3xl md:text-4xl font-extrabold py-4 border-y first-letter:uppercase">
+        <h1 className="w-full border border-x-0 text-2xl sm:text-3xl md:text-4xl font-extrabold pt-0 sm:pt-4 py-4 border-t-0 sm:border-t border-y first-letter:uppercase">
           {event?.title}
         </h1>
 
         <div className="flex flex-col gap-2">
-          <div className="flex justify-start items-center gap-3">
-            <AlarmClock size={32} />
-            Ends in {getExpiryDate(event?.eventEndsTime!)} day(s)
+          <div className="flex items-center gap-3">
+            <div className="size-10 border flex flex-col items-center justify-between pb-1.5 rounded-lg">
+              <div className="w-full h-3.5 bg-secondary rounded-t-md flex items-center justify-center">
+                <p className="text-[10px]">
+                  {moment(event?.eventStartsTime).format("MMM")}
+                </p>
+              </div>
+              <span className="text-xs sm:text-sm">
+                {moment(event?.eventStartsTime).format("D")}
+              </span>
+            </div>
+
+            <div className="flex flex-col">
+              <span className="text-sm sm:text-base text-foreground md:leading-none">
+                {moment(event?.eventStartsTime).format("dddd")},{" "}
+                {moment(event?.eventStartsTime).format("MMMM Do")}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {moment(event?.eventEndsTime).format("dddd")},{" "}
+                {moment(event?.eventEndsTime).format("MMMM Do")}
+              </span>
+            </div>
           </div>
 
-          <div className="flex justify-start">
-            {/* {eventLocationType(
-              event?.location as string,
-              32,
-              true,
-              "flex-row-reverse text-base text-foreground gap-3"
-            )} */}
+          <div className="flex justify-start items-center gap-3">
+            <div className="size-10 border flex items-center justify-center rounded-lg">
+              {locationType === "google" ? (
+                <SiGooglemeet
+                  size={22}
+                  className="text-sm text-muted-foreground min-w-[18px]"
+                />
+              ) : locationType === "youtube" ? (
+                <TbBrandYoutubeFilled size={22} />
+              ) : locationType === "bitly" ? (
+                <SiBitly size={22} />
+              ) : locationType === "https://" || locationType === "http://" ? (
+                <HiStatusOnline size={22} />
+              ) : (
+                locationType === "offline" && <Locate size={22} />
+              )}
+            </div>
+
+            {locationType === "offline" ? (
+              <p className="text-sm sm:text-base text-foreground leading-none">
+                {event?.location}
+              </p>
+            ) : (
+              <Link
+                href={event?.location!}
+                target="_blank"
+                className="text-sm sm:text-base text-foreground leading-none">
+                {event?.location}
+              </Link>
+            )}
           </div>
         </div>
 
         {/* //TODO: IF USER HAS PURCHASED TICKET */}
-        {/* <div className="p-4 border rounded-lg bg-secondary aspect-[2.5]"></div> */}
+        {event?.eventStatus === "CLOSE" && (
+          <div className="p-4 border rounded-xl bg-secondary/50">
+            <div className="size-10 bg-secondary rounded-full mb-2"></div>
+            <h1 className="text-base md:text-lg font-semibold">
+              Thank You for Joining
+            </h1>
+            <p className="text-xs md:text-sm">We hope you enjoyed the event!</p>
+          </div>
+        )}
         {/* //TODO: IF USER HAS PURCHASED TICKET */}
-
-        {event && Date.now() < event?.eventEndsTime && (
-          <>
-            <span>
-              {calculateDateDifference({
-                startTimestamp: Number(event?.eventEndsTime),
-                endTimestamp: Number(endTimestamp),
-                endedMessage: "Event has already ended",
-                notStartedMessage: "Event has not started yet",
-              })}
-            </span>
-          </>
-        )}
-        <span>{event && event?.capacity - event?.seats} seat(s) left</span>
-
-        {event && event?.eventStartsTime > Date.now() && (
-          <p className="text-gray-600">
-            Starts on {formatDate(event?.eventStartsTime)}
-          </p>
-        )}
-
-        {event &&
-          Date.now() > event?.eventStartsTime &&
-          getExpiryDate(event.eventEndsTime) !== 0 && (
-            <p className="text-orange-500">
-              Ends in {getExpiryDate(event.eventEndsTime)} day(s)
-            </p>
-          )}
 
         {event && Date.now() > event.eventEndsTime && (
           <p className="text-red-500">Expired</p>
@@ -435,6 +478,180 @@ export default function EventDetails({ params }: { params: { id: number } }) {
             }}>
             {event?.description}
           </ReactMarkdown>
+        </div>
+
+        <div className="flex sm:hidden flex-col gap-6">
+          {!isAdmin && (
+            <div className="flex flex-col w-full">
+              <p className="text-muted-foreground text-sm font-medium mb-4 pb-2 border-b">
+                Hosted By
+              </p>
+
+              <Link
+                href={`/profile/${eventOwner?.address}`}
+                className="text-sm flex items-center gap-2 w-max group">
+                <span className="size-5 bg-secondary rounded-full border relative">
+                  <Image
+                    alt={eventOwner?.address as string}
+                    src={
+                      eventOwner?.avatar
+                        ? `https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${eventOwner?.avatar}`
+                        : "/assets/logo.png"
+                    }
+                    width={20}
+                    height={20}
+                    priority
+                    className={`size-full ${
+                      eventOwner?.avatar ? "rounded-full" : ""
+                    }`}
+                  />
+                </span>
+                <b className="group-hover:underline">
+                  {shortenAddress(eventOwner?.address as string)}
+                </b>
+              </Link>
+            </div>
+          )}
+
+          <div className="flex flex-col w-full">
+            <p className="text-muted-foreground text-sm font-medium mb-4 pb-2 border-b">
+              {!ticketBuyers
+                ? "None signed up."
+                : `${ticketBuyers?.length} Going`}
+            </p>
+
+            <div className="flex flex-col">
+              <div className="flex items-center">
+                {ticketBuyers?.slice(0, 6)?.map((member) => (
+                  <span
+                    className="size-8 bg-secondary rounded-full relative border-4 border-background first:-ml-1 -ml-3"
+                    key={member?.email}>
+                    <Image
+                      alt={member?.address as string}
+                      src={
+                        member?.avatar
+                          ? `https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${member?.avatar}`
+                          : "/assets/logo.png"
+                      }
+                      width={32}
+                      height={32}
+                      priority
+                      className={`size-full ${
+                        member?.avatar ? "rounded-full" : ""
+                      }`}
+                    />
+                  </span>
+                ))}
+              </div>
+
+              {ticketBuyers && ticketBuyers?.length === 1 ? (
+                <p className="text-sm font-medium">
+                  <Link href={`/profile/${ticketBuyers[0]?.address}`}>
+                    {shortenAddress(ticketBuyers[0]?.address)}
+                  </Link>{" "}
+                  only.
+                </p>
+              ) : ticketBuyers && ticketBuyers?.length === 2 ? (
+                <p className="text-sm font-medium">
+                  <Link href={`/profile/${ticketBuyers[0]?.address}`}>
+                    {shortenAddress(ticketBuyers[0]?.address)}
+                  </Link>
+                  , and{" "}
+                  <Link href={`/profile/${ticketBuyers[1]?.address}`}>
+                    {shortenAddress(ticketBuyers[1]?.address)}
+                  </Link>{" "}
+                  only.
+                </p>
+              ) : ticketBuyers && ticketBuyers?.length >= 3 ? (
+                <p className="text-sm font-medium">
+                  <Link href={`/profile/${ticketBuyers[0]?.address}`}>
+                    {shortenAddress(ticketBuyers[0]?.address)}
+                  </Link>
+                  , and{" "}
+                  <Link href={`/profile/${ticketBuyers[1]?.address}`}>
+                    {shortenAddress(ticketBuyers[1]?.address)}
+                  </Link>{" "}
+                  and {ticketBuyers?.length - 2} others.
+                </p>
+              ) : (
+                <p className="text-sm font-medium">No one has registered.</p>
+              )}
+            </div>
+          </div>
+
+          {!isAdmin ? (
+            <div className="flex flex-col w-full">
+              <p className="text-muted-foreground text-sm font-medium mb-4 pb-2 border-b">
+                Stay up to date
+              </p>
+
+              <div className="flex flex-col gap-2">
+                {!hasBoughtTicket && (
+                  <p className="text-sm font-medium">
+                    Registration starts on{" "}
+                    <b>{moment(event?.regStartsTime).format("MMMM Do")}</b> to{" "}
+                    <b>{moment(event?.regEndsTime).format("MMMM Do")}</b>
+                  </p>
+                )}
+
+                {event?.regStatus === "OPEN" ? (
+                  <>
+                    <p className="text-sm font-medium">
+                      Keep track of the latest information and updates on the
+                      event: <b>{event?.title}</b>
+                    </p>
+                    <div className="flex items-center gap-2">
+                      {!hasBoughtTicket ? (
+                        <BuyTicketPopup {...purchaseTicketProps} />
+                      ) : hasJoinedGroup ? (
+                        <>
+                          <Button variant="secondary" className="w-full">
+                            Refund
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            className="w-full"
+                            asChild>
+                            <Link
+                              className="flex items-center"
+                              href={`/rooms/${Number(event?.eventId)}`}>
+                              <PiWechatLogoDuotone size={16} className="mr-2" />
+                              Go to Room
+                            </Link>
+                          </Button>
+                        </>
+                      ) : (
+                        <JoinGroupPopup {...joinGroupProps} />
+                      )}
+                    </div>
+                  </>
+                ) : event?.regStatus === "PENDING" ? (
+                  <p className="text-sm font-medium">
+                    Registration has not started yet
+                  </p>
+                ) : (
+                  <p className="text-sm font-medium">Registration has closed</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col w-full">
+              <p className="text-muted-foreground text-sm font-medium mb-4 pb-2 border-b">
+                See what others are saying
+              </p>
+
+              <div className="flex flex-col gap-2">
+                <Button variant="secondary" className="w-full" asChild>
+                  <Link
+                    className="flex items-center"
+                    href={`/rooms/${Number(event?.eventId)}`}>
+                    <PiWechatLogoDuotone size={16} className="mr-2" />
+                    Go to Room
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

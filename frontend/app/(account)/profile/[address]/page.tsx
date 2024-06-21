@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, shortenAddress } from "@/lib/utils";
 import { useGlobalContext } from "@/providers/global-provider";
-import { getAllEvents, getUser } from "@/services";
+import { getAllEvents, getAllTicketsOfAUser, getUser } from "@/services";
 import { Copy, CopyCheck, Plus } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -21,11 +21,16 @@ export default function ProfilePage({
 }: {
   params: { address: string };
 }) {
+  const { credentials } = useGlobalContext();
+
   const [activeTab, setActiveTab] = useState("evt");
   const [currentUser, setCurrentUser] = useState<
     IUserCredentials | undefined
   >();
   const [ownedEvents, setOwnedEvents] = useState<IEvent[] | undefined>([]);
+  const [purchasedTickets, setPurchasedTickets] = useState<
+    ITicket[] | undefined
+  >([]);
   const [isFetchingEvents, setIsFetchingEvents] = useState(true);
   const [isFetchingUser, setIsFetchingUser] = useState(true);
 
@@ -34,6 +39,8 @@ export default function ProfilePage({
       try {
         const events = await getAllEvents();
         const currentUser = await getUser(address);
+        const tickets = await getAllTicketsOfAUser(address);
+        setPurchasedTickets(tickets);
 
         if (currentUser) {
           setCurrentUser(currentUser);
@@ -55,12 +62,18 @@ export default function ProfilePage({
     fetchUserAndEvents();
   }, [address]);
 
+  const profileProps = {
+    purchasedTickets,
+    ownedEvents,
+    currentUser,
+  };
+
   return (
     <div className="flex flex-col">
       {isFetchingUser ? (
         <LoadingProfileCard />
       ) : (
-        <ProfileCard user={currentUser!} />
+        <ProfileCard {...profileProps} />
       )}
 
       <div className="border-t w-full">
@@ -127,9 +140,23 @@ export default function ProfilePage({
                   <h1 className="text-base md:text-xl font-bold">
                     No Upcoming Events
                   </h1>
-                  <p className="text-muted-foreground text-sm">
-                    You have no upcoming events. Why not host one?
-                  </p>
+                  {credentials?.address === address ? (
+                    <>
+                      <p className="text-muted-foreground text-sm">
+                        You have no upcoming events. Why not host one?
+                      </p>
+                      <Button variant="secondary" className="mt-4 pl-3" asChild>
+                        <Link href="/create" className="flex items-center">
+                          <Plus size={16} className="mr-2" />
+                          Create Event
+                        </Link>
+                      </Button>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">
+                      {currentUser?.email} have no upcoming events.
+                    </p>
+                  )}
                 </div>
               ) : (
                 ownedEvents &&
