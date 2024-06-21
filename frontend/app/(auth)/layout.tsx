@@ -1,6 +1,7 @@
 "use client";
 
 import LoadingScreen from "@/components/shared/loading-screen";
+import MaxWrapper from "@/components/shared/max-wrapper";
 import { site } from "@/constants";
 import { useGlobalContext } from "@/providers/global-provider";
 import { useRouter } from "next/navigation";
@@ -23,8 +24,10 @@ export default function AuthLayout({ children }: ILayout) {
   }
 
   return (
-    <div className="flex justify-center flex-col flex-1 items-center">
-      {children}
-    </div>
+    <MaxWrapper className="flex-1 flex flex-col">
+      <div className="flex justify-center flex-col flex-1 items-center">
+        {children}
+      </div>
+    </MaxWrapper>
   );
 }

@@ -133,7 +133,7 @@
     "inputs": [],
     "outputs": [
       {
-        "name": "events_",
+        "name": "",
         "type": "tuple[]",
         "internalType": "struct BlumaProtocol.Event[]",
         "components": [
@@ -207,6 +207,31 @@
   },
   {
     "type": "function",
+    "name": "getAllGroupMessages",
+    "inputs": [
+      { "name": "_groupId", "type": "uint32", "internalType": "uint32" }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple[]",
+        "internalType": "struct BlumaProtocol.Message[]",
+        "components": [
+          { "name": "sender", "type": "address", "internalType": "address" },
+          { "name": "email", "type": "string", "internalType": "string" },
+          { "name": "text", "type": "string", "internalType": "string" },
+          {
+            "name": "timestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getAllTickets",
     "inputs": [],
     "outputs": [
@@ -233,6 +258,30 @@
             "type": "uint32",
             "internalType": "uint32"
           }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getAllUser",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple[]",
+        "internalType": "struct BlumaProtocol.User[]",
+        "components": [
+          { "name": "email", "type": "string", "internalType": "string" },
+          {
+            "name": "userAddr",
+            "type": "address",
+            "internalType": "address"
+          },
+          { "name": "isRegistered", "type": "bool", "internalType": "bool" },
+          { "name": "avatar", "type": "string", "internalType": "string" },
+          { "name": "balance", "type": "uint256", "internalType": "uint256" }
         ]
       }
     ],
@@ -381,6 +430,26 @@
   },
   {
     "type": "function",
+    "name": "getGroupMember",
+    "inputs": [
+      { "name": "_groupId", "type": "uint32", "internalType": "uint32" },
+      { "name": "_index", "type": "uint256", "internalType": "uint256" }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct BlumaProtocol.Member",
+        "components": [
+          { "name": "user", "type": "address", "internalType": "address" },
+          { "name": "joinTime", "type": "uint256", "internalType": "uint256" }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getGroupMembers",
     "inputs": [
       { "name": "_eventId", "type": "uint32", "internalType": "uint32" }
@@ -393,31 +462,6 @@
         "components": [
           { "name": "user", "type": "address", "internalType": "address" },
           { "name": "joinTime", "type": "uint256", "internalType": "uint256" }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getGroupMessages",
-    "inputs": [
-      { "name": "_groupId", "type": "uint32", "internalType": "uint32" }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "tuple[]",
-        "internalType": "struct BlumaProtocol.Message[]",
-        "components": [
-          { "name": "sender", "type": "address", "internalType": "address" },
-          { "name": "email", "type": "string", "internalType": "string" },
-          { "name": "text", "type": "string", "internalType": "string" },
-          {
-            "name": "timestamp",
-            "type": "uint256",
-            "internalType": "uint256"
-          }
         ]
       }
     ],
@@ -695,6 +739,12 @@
         "type": "uint32",
         "indexed": true,
         "internalType": "uint32"
+      },
+      {
+        "name": "_joinedTimw",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -850,6 +900,7 @@
     ],
     "anonymous": false
   },
+  { "type": "error", "name": "ALREADY_A_MEMBER", "inputs": [] },
   { "type": "error", "name": "ALREADY_PAID", "inputs": [] },
   {
     "type": "error",

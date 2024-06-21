@@ -1,20 +1,10 @@
-import { Ticket, CircleUser, PencilLine, Group } from "lucide-react";
+import { Ticket, PencilLine } from "lucide-react";
 
 export const nav_links = [
   {
     name: "Events",
     icon: Ticket,
     path: "/home",
-  },
-  {
-    name: "Profile",
-    icon: CircleUser,
-    path: "/profile",
-  },
-  {
-    name: "Rooms",
-    icon: Group,
-    path: "/rooms",
   },
   {
     name: "What's New",
@@ -26,7 +16,7 @@ export const nav_links = [
 export const site = {
   name: "Bluma",
   description: "Delightful events start here.",
-  url: "",
+  url: "https://bluma.vercel.app",
   icon: "/assets/logo.png",
   author: "Abdullahi Salihu",
   profile: "https://ttatyz.vercel.app/",

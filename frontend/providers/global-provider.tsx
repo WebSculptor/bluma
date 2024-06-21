@@ -68,6 +68,19 @@ export default function GlobalContextProvider({ children }: ILayout) {
 
   useEffect(() => {
     fetchUser();
+
+    if (!("Notification" in window)) {
+      console.log("This browser does not support notifications.");
+      return;
+    }
+
+    Notification.requestPermission().then((perm) => {
+      if (perm === "granted") {
+        console.log("Notification permission granted");
+      } else {
+        console.log("Permission denied");
+      }
+    });
   }, []);
 
   useEffect(() => {

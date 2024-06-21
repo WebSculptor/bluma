@@ -12,7 +12,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useWeb3Modal, useWeb3ModalAccount } from "@web3modal/ethers/react";
 import { createAvatar } from "@dicebear/core";
-import { loreleiNeutral } from "@dicebear/collection";
+import { thumbs } from "@dicebear/collection";
 import { authSchema, otpSchema } from "@/lib/validators";
 import { toast } from "sonner";
 import { Authenticating, site } from "@/constants";
@@ -32,7 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 //? ICONS IMPORT
-import { Asterisk, FileDigit, Loader, ScanFace } from "lucide-react";
+import { Asterisk, FileDigit, Loader, MailCheck, ScanFace } from "lucide-react";
 import { IoWalletOutline } from "react-icons/io5";
 import Image from "next/image";
 import { createAccount, getUser } from "@/services";
@@ -40,6 +40,7 @@ import { useGlobalContext } from "@/providers/global-provider";
 import { useRouter } from "next/navigation";
 import { signInWithCustomToken } from "firebase/auth";
 import { firebaseAuth } from "@/config/firbase";
+import { createAccountSuccessEmail } from "@/services/renderNotification";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -53,6 +54,8 @@ export default function SignInPage() {
     undefined
   );
   const [hasOTPBeenSent, setHasOTPBeenSent] = useState(false);
+  const [beforSending, setBeforSending] = useState(false);
+  const [isNewAccount, setIsNewAccount] = useState(false);
 
   const formProps: any = {
     router,
@@ -64,10 +67,16 @@ export default function SignInPage() {
     setUserCred,
     userCred,
     isAuthenticated,
+    beforSending,
+    setBeforSending,
+    isNewAccount,
+    setIsNewAccount,
   };
 
   return hasOTPBeenSent ? (
     <OtpForm {...formProps} />
+  ) : beforSending ? (
+    <BeforeSendingOTP {...formProps} />
   ) : (
     <EmailForm {...formProps} />
   );
@@ -81,6 +90,8 @@ const EmailForm = ({
   setIsRegistering,
   setHasOTPBeenSent,
   setUserCred,
+  setBeforSending,
+  setIsNewAccount,
 }: {
   isConnected: boolean;
   address: string;
@@ -89,6 +100,11 @@ const EmailForm = ({
   setIsRegistering: any;
   setHasOTPBeenSent: any;
   setUserCred: any;
+  userCred: any;
+  beforSending: any;
+  setBeforSending: any;
+  isNewAccount: boolean;
+  setIsNewAccount: any;
 }) => {
   const { open } = useWeb3Modal();
 
@@ -108,7 +124,7 @@ const EmailForm = ({
       return toast.error("Please connect your wallet");
     }
     setIsRegistering(START);
-    const avatar = createAvatar(loreleiNeutral, {
+    const avatar = createAvatar(thumbs, {
       seed: `${address}`,
     });
 
@@ -144,6 +160,7 @@ const EmailForm = ({
 
         if (userCredentials) {
           setUserCred(refinedValues);
+          setIsNewAccount(true);
 
           const otpSent = await sendOTP(
             refinedValues.email,
@@ -152,9 +169,13 @@ const EmailForm = ({
           );
 
           if (otpSent) {
-            setHasOTPBeenSent(true);
-          } else {
+            setBeforSending(true);
             setHasOTPBeenSent(false);
+
+            setTimeout(() => {
+              setBeforSending(false);
+              setHasOTPBeenSent(true);
+            }, 2000);
           }
         }
       } else {
@@ -167,9 +188,13 @@ const EmailForm = ({
         );
 
         if (otpSent) {
-          setHasOTPBeenSent(true);
-        } else {
+          setBeforSending(true);
           setHasOTPBeenSent(false);
+
+          setTimeout(() => {
+            setBeforSending(false);
+            setHasOTPBeenSent(true);
+          }, 2000);
         }
       }
     } catch (error) {
@@ -217,9 +242,6 @@ const EmailForm = ({
             {userAvatar ? (
               <Image
                 src={`https://gateway.pinata.cloud/ipfs/${userAvatar}`}
-                // src={`data:image/svg+xml;utf8,${encodeURIComponent(
-                //   userAvatar
-                // )}`}
                 alt="avatar"
                 fill
                 className="object-cover rounded-[inherit]"
@@ -239,8 +261,7 @@ const EmailForm = ({
 
         <Form {...authenticationForm}>
           <form
-            onSubmit={authenticationForm.handleSubmit(handleAuthentication)}
-          >
+            onSubmit={authenticationForm.handleSubmit(handleAuthentication)}>
             <FormField
               disabled={
                 !isConnected ||
@@ -275,8 +296,7 @@ const EmailForm = ({
                 !address ||
                 isRegistering !== STOP ||
                 isAuthenticated
-              }
-            >
+              }>
               {isRegistering === START ? (
                 <>
                   <Loader size={16} className="animate-spin mr-2" />
@@ -300,11 +320,32 @@ const EmailForm = ({
           variant="secondary"
           type="button"
           disabled={isConnected || isRegistering !== STOP}
-          onClick={async () => await open()}
-        >
+          onClick={async () => await open()}>
           <IoWalletOutline size={16} className="mr-2" />{" "}
           {isConnected ? "Wallet Connected" : "Connect Wallet"}
         </Button>
+      </div>
+    </div>
+  );
+};
+
+const BeforeSendingOTP = ({ userCred }: { userCred: any }) => {
+  return (
+    <div className="max-w-[360px] w-full border rounded-[20px] backdrop-blur-3xl bg-secondary/30 flex flex-col">
+      <div className="px-6 py-5">
+        <div className="w-full">
+          <div className="rounded-full w-16 h-16 bg-secondary/60 flex items-center justify-center relative">
+            <MailCheck size={36} className="text-muted-foreground" />
+          </div>
+        </div>
+
+        <h1 className="mt-3 text-lg md:text-[22px] font-bold">
+          Verification code sent
+        </h1>
+        <p className="text-xs md:text-sm opacity-75">
+          A one-time password has been sent to <b>{userCred?.email}</b>, your
+          email address.
+        </p>
       </div>
     </div>
   );
@@ -318,6 +359,7 @@ const OtpForm = ({
   setIsRegistering,
   isAuthenticated,
   userCred,
+  isNewAccount,
 }: {
   router: any;
   isConnected: boolean;
@@ -326,6 +368,7 @@ const OtpForm = ({
   setIsRegistering: any;
   isAuthenticated: boolean;
   userCred: IUserCredentials | undefined;
+  isNewAccount: boolean;
 }) => {
   const { fetchUser } = useGlobalContext();
   const { STOP, START } = Authenticating;
@@ -339,19 +382,28 @@ const OtpForm = ({
 
   async function handleVerification(values: z.infer<typeof otpSchema>) {
     setIsRegistering(START);
+
     try {
       if (userCred) {
         const result = await verifyOTP(userCred?.email, values?.pin);
-        if (result.user) {
+
+        if (result?.user) {
           fetchUser();
-          router.push("/home");
+
+          if (isNewAccount) {
+            await createAccountSuccessEmail(userCred?.email.toString());
+            router.push("/home");
+          } else {
+            router.push("/home");
+          }
         } else {
-          console.log(result.error);
+          console.log(result?.error);
           setIsRegistering(STOP);
         }
       } else {
         setIsRegistering(STOP);
-        console.log("Something went wrong!!!!!");
+        console.log("No user credentials sent to verify");
+        toast.error("Something went wrong, please try again!");
       }
     } catch (error) {
       console.error("Error verifying OTP:", error);
@@ -450,8 +502,7 @@ const OtpForm = ({
                 !address ||
                 isRegistering !== STOP ||
                 isAuthenticated
-              }
-            >
+              }>
               {isRegistering === START ? (
                 <>
                   <Loader size={16} className="animate-spin mr-2" />
@@ -470,8 +521,7 @@ const OtpForm = ({
           variant="secondary"
           type="button"
           disabled={isConnected || isRegistering !== STOP}
-          onClick={async () => await open()}
-        >
+          onClick={async () => await open()}>
           <IoWalletOutline size={16} className="mr-2" />{" "}
           {isConnected ? "Wallet Connected" : "Connect Wallet"}
         </Button>

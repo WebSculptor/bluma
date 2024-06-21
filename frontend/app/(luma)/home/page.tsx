@@ -5,12 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { site } from "@/constants";
 import { EventStatus, EventType, RegStatus } from "@/enums";
-import {
-  getAllEventGroups,
-  getAllEvents,
-  getEthereumContracts,
-  getEventGroupById,
-} from "@/services";
+import { getAllEvents, getEthereumContracts } from "@/services";
 import { ethers } from "ethers";
 import { CalendarSearch, Plus } from "lucide-react";
 import { IoCalendarOutline } from "react-icons/io5";
@@ -30,54 +25,7 @@ export default function Home() {
       try {
         const evt: IEvent[] | any = await getAllEvents();
 
-        if (evt) {
-          const refinedEvents = evt.map((event: any) => ({
-            eventId: Number(event[0]),
-            title: String(ethers.decodeBytes32String(event[1])),
-            imageUrl: String(event[2]),
-            location: String(event[3]),
-            description: String(event[4]),
-            owner: String(event[5]),
-            seats: Number(event[6]),
-            capacity: Number(event[7]),
-            regStartsTime: Number(event[8]),
-            regEndsTime: Number(event[9]),
-            regStatus: RegStatus[Number(event[10])],
-            eventStatus: EventStatus[Number(event[11])],
-            eventType: EventType[Number(event[12])],
-            eventStartsTime: Number(event[13]),
-            eventEndsTime: Number(event[14]),
-            ticketPrice: Number(event[15]),
-            totalSales: Number(event[16]),
-            createdAt: Number(event[17]),
-            isEventPaid: Boolean(event[18]),
-          }));
-
-          setEvents(refinedEvents);
-
-          // const allEvtGrp = await getAllEventGroups();
-
-          // const evtGrp = allEvtGrp.map((grp: any) => ({
-          //   eventId: Number(grp[0]),
-          //   title: String(ethers.decodeBytes32String(grp[1])),
-          //   imageUrl: grp[2],
-          //   description: grp[3],
-          //   members: grp[4],
-          // }));
-
-          // for (const group of evtGrp) {
-          //   const groupDetails = await getEventGroupById(group.eventId);
-          //   const redefinedGroup = groupDetails.map((grp: any) => ({
-          //     eventId: Number(grp[0]),
-          //     title: String(ethers.decodeBytes32String(grp[1])),
-          //     imageUrl: grp[2],
-          //     description: grp[3],
-          //     members: grp[4],
-          //   }));
-
-          //   console.log("refined groups", redefinedGroup);
-          // }
-        }
+        setEvents(evt);
       } catch (error: any) {
         console.log("COULD NOT FETCH EVENT", error);
       } finally {
@@ -94,31 +42,7 @@ export default function Home() {
           try {
             const evt: IEvent[] | any = await getAllEvents();
 
-            if (evt) {
-              const refinedEvents = evt.map((event: any) => ({
-                eventId: Number(event[0]),
-                title: event[1],
-                imageUrl: String(event[2]),
-                location: String(event[3]),
-                description: String(event[4]),
-                owner: String(event[5]),
-                seats: Number(event[6]),
-                capacity: Number(event[7]),
-                regStartsTime: Number(event[8]),
-                regEndsTime: Number(event[9]),
-                regStatus: RegStatus[Number(event[10])],
-                eventStatus: EventStatus[Number(event[11])],
-                eventType: EventType[Number(event[12])],
-                eventStartsTime: Number(event[13]),
-                eventEndsTime: Number(event[14]),
-                ticketPrice: Number(event[15]),
-                totalSales: Number(event[16]),
-                createdAt: Number(event[17]),
-                isEventPaid: Boolean(event[18]),
-              }));
-
-              setEvents(refinedEvents);
-            }
+            setEvents(evt);
           } catch (error: any) {
             console.log("COULD NOT FETCH EVENT", error);
           } finally {
@@ -211,7 +135,7 @@ export default function Home() {
             .slice()
             .reverse()
             .map((event: IEvent) => (
-              <EventCard {...event} key={event.eventId} />
+              <EventCard event={event} key={event.eventId} />
             ))
         )}
       </div>

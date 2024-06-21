@@ -1,7 +1,7 @@
 "use client";
 
 import LoadingScreen from "@/components/shared/loading-screen";
-import SendMessage from "@/components/shared/send-message";
+import MaxWrapper from "@/components/shared/max-wrapper";
 import { useGlobalContext } from "@/providers/global-provider";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -11,7 +11,7 @@ export default function GroupsLayout({ children }: ILayout) {
   const { credentials, isFetchingUser } = useGlobalContext();
 
   useEffect(() => {
-    if (!credentials) {
+    if (!isFetchingUser && !credentials) {
       router.push("/sign-in");
     }
   }, [credentials, router]);
@@ -21,12 +21,8 @@ export default function GroupsLayout({ children }: ILayout) {
   }
 
   return (
-    <>
-      <div className="flex-1 flex flex-col justify-end">
-        <main>{children}</main>
-
-        <SendMessage />
-      </div>
-    </>
+    <MaxWrapper className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col justify-end">{children}</div>
+    </MaxWrapper>
   );
 }

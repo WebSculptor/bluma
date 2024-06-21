@@ -1,10 +1,12 @@
 "use client";
 
+import moment from "moment";
 import { Button } from "@/components/ui/button";
 import { EventStatus, EventType, RegStatus } from "@/enums";
 import {
   calculateDateDifference,
   formatDate,
+  formatReadableDate,
   getExpiryDate,
   shortenAddress,
 } from "@/lib/utils";
@@ -12,7 +14,6 @@ import {
   getAllTicketsOfAnEvent,
   getEthereumContracts,
   getEventById,
-  getEventGroupById,
   getGroupMembersOfAnEvent,
   getUser,
   joinGroup,
@@ -193,7 +194,7 @@ export default function EventDetails({ params }: { params: { id: number } }) {
               </p>
 
               <Link
-                href={`/user/${eventOwner?.address}`}
+                href={`/profile/${eventOwner?.address}`}
                 className="text-sm flex items-center gap-2 w-max group">
                 <span className="size-5 bg-secondary rounded-full border relative">
                   <Image
@@ -251,18 +252,32 @@ export default function EventDetails({ params }: { params: { id: number } }) {
 
               {ticketBuyers && ticketBuyers?.length === 1 ? (
                 <p className="text-sm font-medium">
-                  {shortenAddress(ticketBuyers[0]?.address)} only.
+                  <Link href={`/profile/${ticketBuyers[0]?.address}`}>
+                    {shortenAddress(ticketBuyers[0]?.address)}
+                  </Link>{" "}
+                  only.
                 </p>
               ) : ticketBuyers && ticketBuyers?.length === 2 ? (
                 <p className="text-sm font-medium">
-                  {shortenAddress(ticketBuyers[0]?.address)}, and{" "}
-                  {shortenAddress(ticketBuyers[1]?.address)} only.
+                  <Link href={`/profile/${ticketBuyers[0]?.address}`}>
+                    {shortenAddress(ticketBuyers[0]?.address)}
+                  </Link>
+                  , and{" "}
+                  <Link href={`/profile/${ticketBuyers[1]?.address}`}>
+                    {shortenAddress(ticketBuyers[1]?.address)}
+                  </Link>{" "}
+                  only.
                 </p>
               ) : ticketBuyers && ticketBuyers?.length >= 3 ? (
                 <p className="text-sm font-medium">
-                  {shortenAddress(ticketBuyers[0]?.address)}, and{" "}
-                  {shortenAddress(ticketBuyers[1]?.address)} and{" "}
-                  {ticketBuyers?.length - 2} others.
+                  <Link href={`/profile/${ticketBuyers[0]?.address}`}>
+                    {shortenAddress(ticketBuyers[0]?.address)}
+                  </Link>
+                  , and{" "}
+                  <Link href={`/profile/${ticketBuyers[1]?.address}`}>
+                    {shortenAddress(ticketBuyers[1]?.address)}
+                  </Link>{" "}
+                  and {ticketBuyers?.length - 2} others.
                 </p>
               ) : (
                 <p className="text-sm font-medium">No one has registered.</p>
@@ -270,22 +285,22 @@ export default function EventDetails({ params }: { params: { id: number } }) {
             </div>
           </div>
 
-          {!isAdmin && (
+          {!isAdmin ? (
             <div className="flex flex-col w-full">
               <p className="text-muted-foreground text-sm font-medium mb-4 pb-2 border-b">
                 Stay up to date
               </p>
 
               <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">
-                  {calculateDateDifference({
-                    startTimestamp: Number(event?.regStartsTime),
-                    endTimestamp: Number(endTimestamp),
-                    endedMessage: "Registration has ended",
-                    notStartedMessage: "Registration has not started yet",
-                  })}
-                </p>
-                {event?.regStartsTime && event?.regStartsTime < Date.now() ? (
+                {!hasBoughtTicket && (
+                  <p className="text-sm font-medium">
+                    Registration starts on{" "}
+                    <b>{moment(event?.regStartsTime).format("MMMM Do")}</b> to{" "}
+                    <b>{moment(event?.regEndsTime).format("MMMM Do")}</b>
+                  </p>
+                )}
+
+                {event?.regStatus === "OPEN" ? (
                   <>
                     <p className="text-sm font-medium">
                       Keep track of the latest information and updates on the
@@ -308,19 +323,30 @@ export default function EventDetails({ params }: { params: { id: number } }) {
                       )}
                     </div>
                   </>
-                ) : event?.regStartsTime &&
-                  event?.regStartsTime > Date.now() ? (
+                ) : event?.regStatus === "PENDING" ? (
                   <p className="text-sm font-medium">
-                    Registration starts on{" "}
-                    <b>{format(event?.regStartsTime!, "LLL dd")}</b> and ends on{" "}
-                    <b>{format(event?.regEndsTime!, "LLL dd")}</b>
+                    Registration has not started yet
                   </p>
                 ) : (
-                  event?.regEndsTime &&
-                  Date.now() > event?.regEndsTime && (
-                    <p className="text-sm font-medium">Registration closed</p>
-                  )
+                  <p className="text-sm font-medium">Registration has closed</p>
                 )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col w-full">
+              <p className="text-muted-foreground text-sm font-medium mb-4 pb-2 border-b">
+                See what others are saying
+              </p>
+
+              <div className="flex flex-col gap-2">
+                <Button variant="secondary" className="w-full" asChild>
+                  <Link
+                    className="flex items-center"
+                    href={`/rooms/${Number(event?.eventId)}`}>
+                    <PiWechatLogoDuotone size={16} className="mr-2" />
+                    Go to Room
+                  </Link>
+                </Button>
               </div>
             </div>
           )}

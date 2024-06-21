@@ -67,6 +67,7 @@ import { TfiWrite } from "react-icons/tfi";
 import { MdOutlineShareLocation } from "react-icons/md";
 import { useGlobalContext } from "@/providers/global-provider";
 import LoadDetails from "@/components/shared/load-details";
+import { createEventSuccessEmail } from "@/services/renderNotification";
 
 // export const eventLocationType = (
 //   location: string,
@@ -211,17 +212,21 @@ export default function CreateEventPage() {
       const result = await createEvent(refinedValues);
 
       if (result) {
-        setDescription("");
-        setIsEventFree(true);
-        setIsEventOnline(true);
-        setIsEventUnlimited(true);
+        const eventTitle = ethers.decodeBytes32String(refinedValues?.title);
+
+        await createEventSuccessEmail(
+          credentials?.email!,
+          eventTitle,
+          refinedValues?.location
+        );
         toast.success("Event created successfully");
-        console.log("RESULT: ", result);
         form.reset();
         router.push("/home");
       }
     } catch (error: any) {
       console.log(error);
+      toast.error("Error creating event");
+    } finally {
       setIsCreating(CreatingEvent.STOP);
     }
   }
@@ -234,7 +239,6 @@ export default function CreateEventPage() {
     setIsGenerating(true);
     try {
       const result = await generateDescription(prompt);
-      // "Empowering African Web3 Founders - Lagos"
       if (result) {
         setDescription(result.trim());
         setPrompt("");

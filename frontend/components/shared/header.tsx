@@ -41,9 +41,9 @@ export default function Header() {
     useGlobalContext();
 
   return (
-    <header className="px-4 py-3 flex items-center justify-between md:justify-normal bg-background border-b sm:border-b-0 sm:backdrop-blur-md gap-6 md:gap-0 sticky top-0 z-50">
+    <header className="px-4 py-3 flex items-center justify-between md:justify-normal backdrop-blur-3xl gap-6 md:gap-0 sticky top-0 z-50">
       <div className="w-max xl:w-[350px]">
-        <Logo path="/" />
+        <Logo />
       </div>
 
       {isAuthenticated && (
@@ -54,16 +54,20 @@ export default function Header() {
               "lg:max-w-[960px]":
                 pathname === "/" ||
                 pathname === "/create" ||
-                pathname.includes("/event/"),
+                pathname.includes("/event"),
             }
           )}>
           {nav_links.map((link) => {
-            const isActive = link.path === pathname;
+            const isActive = pathname.includes(link.path);
 
             return (
               <Link
                 key={link.path}
-                href={link.path}
+                href={
+                  link.path === "/profile"
+                    ? `/profile/${credentials?.address}`
+                    : link.path
+                }
                 className={cn(
                   "flex items-center text-muted-foreground hover:text-primary transition-colors duration-300",
                   {
@@ -87,8 +91,8 @@ export default function Header() {
         {!isAuthenticated ? (
           <Button
             size="sm"
-            className="rounded-full h-[30px]"
-            variant="secondary"
+            className="h-[30px]"
+            variant={pathname === "/sign-in" ? "default" : "outline"}
             asChild>
             <Link href="/sign-in">Sign In</Link>
           </Button>
@@ -105,12 +109,11 @@ export default function Header() {
               className="text-muted-foreground hover:text-primary transition-all cursor-pointer hidden md:flex"
             />
 
-            <Link href="/notifications" className="hidden md:flex">
-              <Bell
-                size={16}
-                className="text-muted-foreground hover:text-primary transition-all cursor-pointer"
-              />
-            </Link>
+            <Bell
+              size={16}
+              className="text-muted-foreground hover:text-primary transition-all cursor-pointer hidden md:flex"
+            />
+
             <DropdownMenu>
               <DropdownMenuTrigger className="rounded-full">
                 <ProfilePicture
@@ -157,30 +160,27 @@ export default function Header() {
 
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem className="py-2 px-3 text-[13px] cursor-pointer font-medium">
-                  View Profile
+                <DropdownMenuItem
+                  className="py-2 px-3 text-[13px] cursor-pointer font-medium"
+                  asChild>
+                  <Link href={`/profile/${credentials?.address}`}>
+                    My Profile
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="py-2 px-3 text-[13px] cursor-pointer font-medium"
                   onClick={async () => await open()}>
                   Wallet
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="py-2 px-3 text-[13px] cursor-pointer font-medium"
-                  asChild>
-                  <Link href="/notifications">Notifications</Link>
-                </DropdownMenuItem>
-
-                <DropdownMenuSeparator />
-
-                {process.env.NEXT_PUBLIC_ADMIN_ADDRESS?.toLowerCase() ===
-                  credentials?.address.toLowerCase() && (
+                {credentials?.address ===
+                  process.env.NEXT_PUBLIC_ADMIN_ADDRESS && (
                   <DropdownMenuItem
                     className="py-2 px-3 text-[13px] cursor-pointer font-medium"
                     asChild>
-                    <Link href="/admin/users">All Users</Link>
+                    <Link href="/admin/all-users">Accounts</Link>
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <LogOutModal />
                 </DropdownMenuItem>
@@ -194,12 +194,16 @@ export default function Header() {
               <SheetContent>
                 <div className="flex flex-col mt-10 w-full">
                   {nav_links.map((link) => {
-                    const isActive = link.path === pathname;
+                    const isActive = pathname.includes(link.path);
 
                     return (
                       <SheetClose key={link.path} asChild>
                         <Link
-                          href={link.path}
+                          href={
+                            link.path === "/profile"
+                              ? `/profile/${credentials?.address}`
+                              : link.path
+                          }
                           className={cn(
                             "flex items-center text-muted-foreground hover:text-primary transition-colors duration-300 py-3 border-b",
                             {
@@ -214,22 +218,6 @@ export default function Header() {
                       </SheetClose>
                     );
                   })}
-                  <SheetClose asChild>
-                    <Link
-                      href="/notifications"
-                      className={cn(
-                        "flex items-center text-muted-foreground hover:text-primary transition-colors duration-300 py-3 border-b",
-                        {
-                          "text-primary hover:text-primary":
-                            pathname === "/notifications",
-                        }
-                      )}>
-                      <Bell size={16} className="mr-2" />
-                      <p className="text-sm capitalize font-medium">
-                        Notifications
-                      </p>
-                    </Link>
-                  </SheetClose>
                   <SheetClose asChild>
                     <Link
                       href="/create"

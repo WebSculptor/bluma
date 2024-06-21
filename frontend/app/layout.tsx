@@ -40,13 +40,12 @@ export default function RootLayout({
         className={cn(
           "min-h-screen bg-background font-sans antialiased flex flex-col",
           fontSans.variable
-        )}
-      >
+        )}>
         <GlobalSession>
           <Analytics />
           <div className="flex-1 flex flex-col">
             <Header />
-            <MaxWrapper className="flex-1 flex flex-col">{children}</MaxWrapper>
+            {children}
           </div>
         </GlobalSession>
       </body>

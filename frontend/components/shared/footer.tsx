@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const footer_links = [
   {
     name: "What's New",
-    path: "/release",
+    path: "/update",
   },
   {
     name: "Discover",
@@ -30,28 +30,30 @@ export default function Footer() {
   return (
     <footer className="py-6 mt-auto border-t flex flex-col gap-6">
       <div className="flex items-center justify-between gap-4 flex-wrap flex-col md:flex-row">
-        <div className="flex items-start gap-4">
-          <Logo path="/home" />
+        <div className="flex items-center gap-2 flex-col sm:gap-4 sm:flex-row">
+          <Logo />
 
-          {footer_links.map((link) => {
-            const isActive = link.path === pathname;
+          <div className="flex items-center gap-4">
+            {footer_links.map((link) => {
+              const isActive = link.path === pathname;
 
-            return (
-              <Link
-                key={link.path}
-                href={link.path}
-                className={cn(
-                  "flex items-center text-muted-foreground hover:text-primary transition-colors duration-300",
-                  {
-                    "text-initial hover:text-initial": isActive,
-                  }
-                )}>
-                <p className="text-xs md:text-sm capitalize font-normal">
-                  {link.name}
-                </p>
-              </Link>
-            );
-          })}
+              return (
+                <Link
+                  key={link.path}
+                  href={link.path}
+                  className={cn(
+                    "flex items-center text-muted-foreground hover:text-primary transition-colors duration-300",
+                    {
+                      "text-initial hover:text-initial": isActive,
+                    }
+                  )}>
+                  <p className="text-xs md:text-sm capitalize font-normal">
+                    {link.name}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
         </div>
 
         <div className="flex items-start gap-4">

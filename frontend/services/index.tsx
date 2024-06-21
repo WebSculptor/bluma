@@ -66,10 +66,6 @@ export const getUser = async (
     const contract = await getEthereumContracts();
     const user = await contract.getUser(address);
 
-    if (!user) {
-      return undefined;
-    }
-
     const structuredUser: IUserCredentials = {
       email: user[0],
       address: user[1],
@@ -78,7 +74,36 @@ export const getUser = async (
       balance: Number(user[4]),
     };
 
+    if (
+      structuredUser?.address.toString() ===
+      process.env.NEXT_PUBLIC_ADDRESS_ZERO?.toString()
+    ) {
+      return undefined;
+    }
+
     return structuredUser;
+  } catch (error) {
+    reportError(error);
+    throw error;
+  }
+};
+
+export const getAllUsers = async (): Promise<
+  IUserCredentials[] | undefined
+> => {
+  try {
+    const contract = await getEthereumContracts();
+    const users = await contract.getAllUser();
+
+    const redefinedUsers: IUserCredentials[] = await users?.map((usr: any) => ({
+      email: usr[0],
+      address: usr[1],
+      isRegistered: usr[2],
+      avatar: usr[3],
+      balance: Number(usr[4]),
+    }));
+
+    return redefinedUsers;
   } catch (error) {
     reportError(error);
     throw error;
@@ -135,7 +160,6 @@ export const createEvent = async (event: ICreateEvent) => {
       _ticketPrice: newTicketPrice,
       _isEventPaid: isEventPaid,
     };
-    console.log(redefinedEventData);
 
     const tx = await contract.createEvent(
       event.title,
@@ -175,7 +199,29 @@ export const getAllEvents = async () => {
       return undefined;
     }
 
-    return events;
+    const refinedEvents = events.map((event: any) => ({
+      eventId: Number(event[0]),
+      title: String(ethers.decodeBytes32String(event[1])),
+      imageUrl: String(event[2]),
+      location: String(event[3]),
+      description: String(event[4]),
+      owner: String(event[5]),
+      seats: Number(event[6]),
+      capacity: Number(event[7]),
+      regStartsTime: Number(event[8]),
+      regEndsTime: Number(event[9]),
+      regStatus: RegStatus[Number(event[10])],
+      eventStatus: EventStatus[Number(event[11])],
+      eventType: EventType[Number(event[12])],
+      eventStartsTime: Number(event[13]),
+      eventEndsTime: Number(event[14]),
+      ticketPrice: Number(event[15]),
+      totalSales: Number(event[16]),
+      createdAt: Number(event[17]),
+      isEventPaid: Boolean(event[18]),
+    }));
+
+    return refinedEvents;
   } catch (error) {
     reportError(error);
     throw error;
@@ -252,14 +298,22 @@ export const getAllEventGroups = async () => {
     }
 
     const contract = await getEthereumContracts();
-    const event = contract.getAllEventGroups();
+    const rooms = await contract.getAllEventGroups();
 
-    if (!event) {
+    if (!rooms) {
       console.log("No groups found");
       return undefined;
     }
 
-    return event;
+    const evtGrp = rooms?.map((grp: any) => ({
+      eventId: Number(grp[0]),
+      title: String(ethers.decodeBytes32String(grp[1])),
+      imageUrl: grp[2],
+      description: grp[3],
+      members: grp[4],
+    }));
+
+    return evtGrp;
   } catch (error) {
     reportError(error);
     throw error;
@@ -341,6 +395,40 @@ export const getEventGroupById = async (eventId: number) => {
     };
 
     return redefinedGroup;
+  } catch (error) {
+    reportError(error);
+    throw error;
+  }
+};
+
+export const getAllTicketsOfAUser = async (address: string) => {
+  try {
+    if (!window.ethereum) {
+      throw new Error("Please install a browser provider");
+    }
+
+    const contract = await getEthereumContracts();
+    const tickets = await contract.getTicket(address);
+
+    const redefinedTickets = {
+      ticketId: Number(tickets[0]),
+      eventId: Number(tickets[1]),
+      buyer: String(tickets[2]),
+      ticketCost: Number(tickets[3]),
+      purchaseTime: Number(tickets[4]),
+      numberOfTicket: Number(tickets[5]),
+    };
+
+    if (!redefinedTickets) {
+      console.log("No tickets bought");
+      return undefined;
+    }
+
+    const allTickets = await getAllTickets();
+
+    const userTickets = allTickets?.filter((tk) => tk?.buyer === address);
+
+    return userTickets;
   } catch (error) {
     reportError(error);
     throw error;
