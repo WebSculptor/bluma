@@ -2,17 +2,18 @@
 
 import moment from "moment";
 import { Button } from "@/components/ui/button";
-import { EventStatus, EventType, RegStatus } from "@/enums";
+import { EnEvent, EnStatus } from "@/enums";
 import {
   calculateDateDifference,
   formatDate,
   formatReadableDate,
   getExpiryDate,
+  getStatus,
   shortenAddress,
 } from "@/lib/utils";
 import {
   getAllTicketsOfAnEvent,
-  getEthereumContracts,
+  getBlumaContracts,
   getEventById,
   getGroupMembersOfAnEvent,
   getUser,
@@ -34,7 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { MdPayments } from "react-icons/md";
 import { Input } from "@/components/ui/input";
-import { AlarmClock, Locate, Loader } from "lucide-react";
+import { AlarmClock, Locate, Loader, Info } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import LoadDetails from "@/components/shared/load-details";
 import { format } from "date-fns";
@@ -153,17 +154,28 @@ export default function EventDetails({ params }: { params: { id: number } }) {
 
   useEffect(() => {
     const listenForEvent = async () => {
-      const contract = await getEthereumContracts();
+      const contract = await getBlumaContracts();
 
       contract.on(
         "TicketPurchased",
         async (buyer, _eventId, numberOfTickets) => {
+          console.log("PURCHASED TICKET", { buyer, _eventId, numberOfTickets });
           await fetchEventData(Number(params?.id));
         }
       );
+      contract.on("RegistrationClose", async (_currentTime, _status) => {
+        console.log("REGISTRATION CLOSED", { _currentTime, _status });
+        await fetchEventData(Number(params?.id));
+      });
+      contract.on("EventClosed", async (_eventId, _currentTime) => {
+        console.log("EVENT CLOSED", { _eventId, _currentTime });
+        await fetchEventData(Number(params?.id));
+      });
 
       return () => {
         contract.removeAllListeners("TicketPurchased");
+        contract.removeAllListeners("RegistrationClose");
+        contract.removeAllListeners("EventClosed");
       };
     };
 
@@ -201,6 +213,7 @@ export default function EventDetails({ params }: { params: { id: number } }) {
             className="rounded-[inherit] size-full pointer-events-none"
           />
         </div>
+
         <div className="hidden sm:flex flex-col gap-6">
           {!isAdmin && (
             <div className="flex flex-col w-full">
@@ -315,7 +328,7 @@ export default function EventDetails({ params }: { params: { id: number } }) {
                   </p>
                 )}
 
-                {event?.regStatus === "OPEN" ? (
+                {/* {event?.regStartsTime > new Date() ? (
                   <>
                     <p className="text-sm font-medium">
                       Keep track of the latest information and updates on the
@@ -346,13 +359,13 @@ export default function EventDetails({ params }: { params: { id: number } }) {
                       )}
                     </div>
                   </>
-                ) : event?.regStatus === "PENDING" ? (
+                ) : event?.regEndsTime < new Date() ? (
                   <p className="text-sm font-medium">
                     Registration has not started yet
                   </p>
                 ) : (
                   <p className="text-sm font-medium">Registration has closed</p>
-                )}
+                )} */}
               </div>
             </div>
           ) : (
@@ -373,6 +386,31 @@ export default function EventDetails({ params }: { params: { id: number } }) {
               </div>
             </div>
           )}
+
+          <div>
+            <h2>Registration Status:</h2>
+            {event && event?.regStatus === EnStatus.PENDING && (
+              <p>Registration is pending.</p>
+            )}
+            {event && event?.regStatus === EnStatus.OPEN && (
+              <p>Registration is ongoing.</p>
+            )}
+            {event && event?.regStatus === EnStatus.CLOSE && (
+              <p>Registration has ended.</p>
+            )}
+          </div>
+          <div>
+            <h2>Event Status:</h2>
+            {event && event?.eventStatus === EnStatus.PENDING && (
+              <p>Event is pending.</p>
+            )}
+            {event && event?.eventStatus === EnStatus.OPEN && (
+              <p>Event is ongoing.</p>
+            )}
+            {event && event?.eventStatus === EnStatus.CLOSE && (
+              <p>Event has ended.</p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -395,7 +433,7 @@ export default function EventDetails({ params }: { params: { id: number } }) {
             </div>
 
             <div className="flex flex-col">
-              <span className="text-sm sm:text-base text-foreground md:leading-none">
+              <span className="text-sm sm:text-base text-foreground">
                 {moment(event?.eventStartsTime).format("dddd")},{" "}
                 {moment(event?.eventStartsTime).format("MMMM Do")}
               </span>
@@ -407,7 +445,7 @@ export default function EventDetails({ params }: { params: { id: number } }) {
           </div>
 
           <div className="flex justify-start items-center gap-3">
-            <div className="size-10 border flex items-center justify-center rounded-lg">
+            <div className="size-10 border flex items-center justify-center rounded-lg text-foreground/50">
               {locationType === "google" ? (
                 <SiGooglemeet
                   size={22}
@@ -440,20 +478,32 @@ export default function EventDetails({ params }: { params: { id: number } }) {
         </div>
 
         {/* //TODO: IF USER HAS PURCHASED TICKET */}
-        {event?.eventStatus === "CLOSE" && (
-          <div className="p-4 border rounded-xl bg-secondary/50">
-            <div className="size-10 bg-secondary rounded-full mb-2"></div>
-            <h1 className="text-base md:text-lg font-semibold">
-              Thank You for Joining
-            </h1>
-            <p className="text-xs md:text-sm">We hope you enjoyed the event!</p>
+        {event && event?.eventStatus === EnStatus.CLOSE && (
+          <div className="p-3 sm:p-4 border rounded-lg sm:rounded-xl border-initial bg-initial/10 text-initial flex items-start">
+            <Info size={20} className="mr-3 mt-1" />
+            {hasBoughtTicket && !isAdmin ? (
+              <div>
+                <div className="size-10 bg-secondary rounded-full mb-2"></div>
+                <h1 className="text-base md:text-lg font-semibold">
+                  We Appreciate Your Participation
+                </h1>
+                <p className="text-xs md:text-sm">
+                  Hope the event was enjoyable for you!
+                </p>
+              </div>
+            ) : (
+              <div>
+                <h1 className="text-base md:text-lg font-semibold">
+                  This event has concluded.
+                </h1>
+                <p className="text-xs md:text-sm">
+                  NFTs were handed to the attendees as a token of appreciation.
+                </p>
+              </div>
+            )}
           </div>
         )}
         {/* //TODO: IF USER HAS PURCHASED TICKET */}
-
-        {event && Date.now() > event.eventEndsTime && (
-          <p className="text-red-500">Expired</p>
-        )}
 
         <div className="flex flex-col w-full">
           <p className="text-muted-foreground text-sm font-medium mb-4 pb-2 border-b">

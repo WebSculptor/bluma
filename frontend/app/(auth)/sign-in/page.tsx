@@ -41,6 +41,7 @@ import { useRouter } from "next/navigation";
 import { signInWithCustomToken } from "firebase/auth";
 import { firebaseAuth } from "@/config/firbase";
 import { createAccountSuccessEmail } from "@/services/renderNotification";
+import Link from "next/link";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -54,7 +55,7 @@ export default function SignInPage() {
     undefined
   );
   const [hasOTPBeenSent, setHasOTPBeenSent] = useState(false);
-  const [beforSending, setBeforSending] = useState(false);
+  const [beforeSending, setBeforeSending] = useState(false);
   const [isNewAccount, setIsNewAccount] = useState(false);
 
   const formProps: any = {
@@ -67,15 +68,15 @@ export default function SignInPage() {
     setUserCred,
     userCred,
     isAuthenticated,
-    beforSending,
-    setBeforSending,
+    beforeSending,
+    setBeforeSending,
     isNewAccount,
     setIsNewAccount,
   };
 
   return hasOTPBeenSent ? (
     <OtpForm {...formProps} />
-  ) : beforSending ? (
+  ) : beforeSending ? (
     <BeforeSendingOTP {...formProps} />
   ) : (
     <EmailForm {...formProps} />
@@ -90,7 +91,7 @@ const EmailForm = ({
   setIsRegistering,
   setHasOTPBeenSent,
   setUserCred,
-  setBeforSending,
+  setBeforeSending,
   setIsNewAccount,
 }: {
   isConnected: boolean;
@@ -101,8 +102,8 @@ const EmailForm = ({
   setHasOTPBeenSent: any;
   setUserCred: any;
   userCred: any;
-  beforSending: any;
-  setBeforSending: any;
+  beforeSending: any;
+  setBeforeSending: any;
   isNewAccount: boolean;
   setIsNewAccount: any;
 }) => {
@@ -169,11 +170,11 @@ const EmailForm = ({
           );
 
           if (otpSent) {
-            setBeforSending(true);
+            setBeforeSending(true);
             setHasOTPBeenSent(false);
 
             setTimeout(() => {
-              setBeforSending(false);
+              setBeforeSending(false);
               setHasOTPBeenSent(true);
             }, 2000);
           }
@@ -188,11 +189,11 @@ const EmailForm = ({
         );
 
         if (otpSent) {
-          setBeforSending(true);
+          setBeforeSending(true);
           setHasOTPBeenSent(false);
 
           setTimeout(() => {
-            setBeforSending(false);
+            setBeforeSending(false);
             setHasOTPBeenSent(true);
           }, 2000);
         }
@@ -235,96 +236,105 @@ const EmailForm = ({
   }
 
   return (
-    <div className="max-w-[360px] w-full border rounded-[20px] backdrop-blur-3xl bg-secondary/30 flex flex-col">
-      <div className="px-6 py-5 border-b">
-        <div className="w-full">
-          <div className="rounded-full w-16 h-16 bg-secondary/60 flex items-center justify-center relative">
-            {userAvatar ? (
-              <Image
-                src={`https://gateway.pinata.cloud/ipfs/${userAvatar}`}
-                alt="avatar"
-                fill
-                className="object-cover rounded-[inherit]"
-              />
-            ) : (
-              <ScanFace size={36} className="text-muted-foreground" />
-            )}
-          </div>
-        </div>
-
-        <h1 className="mt-3 text-lg md:text-[22px] font-bold">
-          Welcome to {site.name}
-        </h1>
-        <p className="text-xs md:text-sm opacity-75">
-          Please sign in or sign up below.
-        </p>
-
-        <Form {...authenticationForm}>
-          <form
-            onSubmit={authenticationForm.handleSubmit(handleAuthentication)}>
-            <FormField
-              disabled={
-                !isConnected ||
-                !address ||
-                isRegistering !== STOP ||
-                isAuthenticated
-              }
-              control={authenticationForm.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem className="w-full mt-4">
-                  <FormLabel>
-                    Email Address <Asterisk size={12} className="text-xs" />
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="you@example.com"
-                      type="email"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Button
-              type="submit"
-              className="w-full mt-4"
-              disabled={
-                !isConnected ||
-                !address ||
-                isRegistering !== STOP ||
-                isAuthenticated
-              }>
-              {isRegistering === START ? (
-                <>
-                  <Loader size={16} className="animate-spin mr-2" />
-                  Please wait...
-                </>
-              ) : isRegistering === GENERATING ? (
-                <>
-                  <Loader size={16} className="animate-spin mr-2" />
-                  Creating Avatar...
-                </>
+    <div className="flex flex-col max-w-[360px] w-full gap-4">
+      <div className="w-full border rounded-[20px] backdrop-blur-3xl bg-secondary/30 flex flex-col">
+        <div className="px-6 py-5 border-b">
+          <div className="w-full">
+            <div className="rounded-full w-16 h-16 bg-secondary/60 flex items-center justify-center relative">
+              {userAvatar ? (
+                <Image
+                  src={`https://gateway.pinata.cloud/ipfs/${userAvatar}`}
+                  alt="avatar"
+                  fill
+                  className="object-cover rounded-[inherit]"
+                />
               ) : (
-                "Continue with Email"
+                <ScanFace size={36} className="text-muted-foreground" />
               )}
-            </Button>
-          </form>
-        </Form>
+            </div>
+          </div>
+
+          <h1 className="mt-3 text-lg md:text-[22px] font-bold">
+            Welcome to {site.name}
+          </h1>
+          <p className="text-xs md:text-sm opacity-75">
+            Please sign in or sign up below.
+          </p>
+
+          <Form {...authenticationForm}>
+            <form
+              onSubmit={authenticationForm.handleSubmit(handleAuthentication)}>
+              <FormField
+                disabled={
+                  !isConnected ||
+                  !address ||
+                  isRegistering !== STOP ||
+                  isAuthenticated
+                }
+                control={authenticationForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem className="w-full mt-4">
+                    <FormLabel>
+                      Email Address <Asterisk size={12} className="text-xs" />
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="you@example.com"
+                        type="email"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button
+                type="submit"
+                className="w-full mt-4"
+                disabled={
+                  !isConnected ||
+                  !address ||
+                  isRegistering !== STOP ||
+                  isAuthenticated
+                }>
+                {isRegistering === START ? (
+                  <>
+                    <Loader size={16} className="animate-spin mr-2" />
+                    Please wait...
+                  </>
+                ) : isRegistering === GENERATING ? (
+                  <>
+                    <Loader size={16} className="animate-spin mr-2" />
+                    Creating Avatar...
+                  </>
+                ) : (
+                  "Continue with Email"
+                )}
+              </Button>
+            </form>
+          </Form>
+        </div>
+        <div className="py-4 px-6 flex flex-col">
+          <Button
+            className="w-full h-10"
+            variant="secondary"
+            type="button"
+            disabled={isConnected || isRegistering !== STOP}
+            onClick={async () => await open()}>
+            <IoWalletOutline size={16} className="mr-2" />{" "}
+            {isConnected ? "Wallet Connected" : "Connect Wallet"}
+          </Button>
+        </div>
       </div>
-      <div className="py-4 px-6 flex flex-col">
-        <Button
-          className="w-full h-10"
-          variant="secondary"
-          type="button"
-          disabled={isConnected || isRegistering !== STOP}
-          onClick={async () => await open()}>
-          <IoWalletOutline size={16} className="mr-2" />{" "}
-          {isConnected ? "Wallet Connected" : "Connect Wallet"}
-        </Button>
-      </div>
+
+      <Link
+        href="/market"
+        className="text-sm text-muted-foreground text-center">
+        To continue using {site.name}, mint some{" "}
+        <b className="underline text-primary">BLUM</b> tokens.
+      </Link>
     </div>
   );
 };

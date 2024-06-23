@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 import CONTRACT_ABI from "@/json/luma.json";
-import { EventStatus, EventType, RegStatus } from "@/enums";
+import { EnEvent, EnStatus } from "@/enums";
+import { getStatus } from "@/lib/utils";
 
 let ethereum: any;
 
@@ -8,7 +9,7 @@ const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS!;
 
 if (typeof window !== "undefined") ethereum = (window as any).ethereum;
 
-export const getEthereumContracts = async () => {
+export const getBlumaContracts = async () => {
   if (!window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
@@ -49,7 +50,7 @@ export const checkIfUserIsRegistered = async (address: string) => {
       throw new Error("Please install a browser provider");
     }
 
-    const contract = await getEthereumContracts();
+    const contract = await getBlumaContracts();
     const isRegistered: boolean = await contract.isRegistered(address);
 
     return isRegistered;
@@ -63,7 +64,7 @@ export const getUser = async (
   address: string
 ): Promise<IUserCredentials | undefined> => {
   try {
-    const contract = await getEthereumContracts();
+    const contract = await getBlumaContracts();
     const user = await contract.getUser(address);
 
     const structuredUser: IUserCredentials = {
@@ -92,7 +93,7 @@ export const getAllUsers = async (): Promise<
   IUserCredentials[] | undefined
 > => {
   try {
-    const contract = await getEthereumContracts();
+    const contract = await getBlumaContracts();
     const users = await contract.getAllUser();
 
     const redefinedUsers: IUserCredentials[] = await users?.map((usr: any) => ({
@@ -119,7 +120,7 @@ export const createAccount = async (
   }
 
   try {
-    const contract = await getEthereumContracts();
+    const contract = await getBlumaContracts();
     const tx = await contract.createAccount(
       credentials.email,
       credentials.address,
@@ -144,7 +145,7 @@ export const createEvent = async (event: ICreateEvent) => {
   const newTicketPrice = event.ticketPrice === 0 ? 10 : event.ticketPrice;
 
   try {
-    const contract = await getEthereumContracts();
+    const contract = await getBlumaContracts();
 
     // Log parameters for debugging
     const redefinedEventData = {
@@ -191,7 +192,7 @@ export const getAllEvents = async () => {
       throw new Error("Please install a browser provider");
     }
 
-    const contract = await getEthereumContracts();
+    const contract = await getBlumaContracts();
     const events: IEvent[] = await contract.getAllEvents();
 
     if (!events) {
@@ -210,9 +211,11 @@ export const getAllEvents = async () => {
       capacity: Number(event[7]),
       regStartsTime: Number(event[8]),
       regEndsTime: Number(event[9]),
-      regStatus: RegStatus[Number(event[10])],
-      eventStatus: EventStatus[Number(event[11])],
-      eventType: EventType[Number(event[12])],
+      regStatus:
+        EnStatus[getStatus(Date.now(), Number(event[8]), Number(event[9]))],
+      eventStatus:
+        EnStatus[getStatus(Date.now(), Number(event[13]), Number(event[14]))],
+      eventType: EnEvent[Number(event[12])],
       eventStartsTime: Number(event[13]),
       eventEndsTime: Number(event[14]),
       ticketPrice: Number(event[15]),
@@ -228,43 +231,27 @@ export const getAllEvents = async () => {
   }
 };
 
-export const getEventById = async (eventId: any) => {
+export const getEventById = async (
+  eventId: any
+): Promise<IEvent | undefined> => {
   try {
     if (!window.ethereum) {
       throw new Error("Please install a browser provider");
     }
 
-    const contract = await getEthereumContracts();
-    const event = await contract.getEventById(eventId);
+    const contract = await getBlumaContracts();
+    const events = await getAllEvents();
 
-    const refinedEvents: IEvent = {
-      eventId: Number(event[0]),
-      title: String(ethers.decodeBytes32String(event[1])),
-      imageUrl: String(event[2]),
-      location: String(event[3]),
-      description: String(event[4]),
-      owner: String(event[5]),
-      seats: Number(event[6]),
-      capacity: Number(event[7]),
-      regStartsTime: Number(event[8]),
-      regEndsTime: Number(event[9]),
-      regStatus: RegStatus[Number(event[10])],
-      eventStatus: EventStatus[Number(event[11])],
-      eventType: EventType[Number(event[12])],
-      eventStartsTime: Number(event[13]),
-      eventEndsTime: Number(event[14]),
-      ticketPrice: Number(event[15]),
-      totalSales: Number(event[16]),
-      createdAt: Number(event[17]),
-      isEventPaid: Boolean(event[18]),
-    };
-
-    if (!refinedEvents) {
+    if (!events) {
       console.log("No event found");
       return undefined;
     }
 
-    return refinedEvents;
+    const refinedEvent = events?.find(
+      (event: IEvent) => event?.eventId === eventId
+    );
+
+    return refinedEvent;
   } catch (error) {
     reportError(error);
     throw error;
@@ -277,7 +264,7 @@ export const purchaseTicket = async (eventId: any, numberOfTickets: number) => {
       throw new Error("Please install a browser provider");
     }
 
-    const contract = await getEthereumContracts();
+    const contract = await getBlumaContracts();
     const tx = await contract.purchaseTicket(eventId, numberOfTickets);
 
     const result = await tx.wait();
@@ -297,7 +284,7 @@ export const getAllEventGroups = async () => {
       throw new Error("Please install a browser provider");
     }
 
-    const contract = await getEthereumContracts();
+    const contract = await getBlumaContracts();
     const rooms = await contract.getAllEventGroups();
 
     if (!rooms) {
@@ -326,7 +313,7 @@ export const getGroupMembersOfAnEvent = async (eventId: number) => {
       throw new Error("Please install a browser provider");
     }
 
-    const contract = await getEthereumContracts();
+    const contract = await getBlumaContracts();
     const members = await contract.getGroupMembers(Number(eventId));
 
     const redefinedMembers = await members?.map((member: any) => ({
@@ -352,7 +339,7 @@ export const getEventGroupById = async (eventId: number) => {
       throw new Error("Please install a browser provider");
     }
 
-    const contract = await getEthereumContracts();
+    const contract = await getBlumaContracts();
     const group = await contract.getEventGroup(eventId);
 
     if (!group) {
@@ -407,7 +394,7 @@ export const getAllTicketsOfAUser = async (address: string) => {
       throw new Error("Please install a browser provider");
     }
 
-    const contract = await getEthereumContracts();
+    const contract = await getBlumaContracts();
     const tickets = await contract.getTicket(address);
 
     const redefinedTickets = {
@@ -441,7 +428,7 @@ export const getAllTickets = async () => {
       throw new Error("Please install a browser provider");
     }
 
-    const contract = await getEthereumContracts();
+    const contract = await getBlumaContracts();
     const tickets = await contract.getAllTickets();
 
     const redefinedTickets = tickets?.map((ticket: any) => ({
@@ -528,7 +515,7 @@ export const joinGroup = async (eventId: number) => {
       throw new Error("Please install a browser provider");
     }
 
-    const contract = await getEthereumContracts();
+    const contract = await getBlumaContracts();
     const joined = await contract.joinGroup(eventId);
 
     if (!joined) {
@@ -549,7 +536,7 @@ export const getAllGroupMessages = async (groupId: number) => {
       throw new Error("Please install a browser provider");
     }
 
-    const contract = await getEthereumContracts();
+    const contract = await getBlumaContracts();
     const groupMessages = await contract.getGroupMessages(Number(groupId));
 
     if (!groupMessages) {
@@ -587,11 +574,16 @@ export const sendMessage = async (groupId: number, msg: string) => {
     if (!window.ethereum) {
       throw new Error("Please install a browser provider");
     }
+    console.log("GETTING CONTRACT...");
+    const contract = await getBlumaContracts();
+    console.log("CONTRACT IS AVAILABLE...");
+    console.log("SENDING MESSAGE...");
+    const message = await contract.groupChat(groupId, msg);
+    console.log("MESSAGE SENT...");
 
-    const contract = await getEthereumContracts();
-    const message = await contract.groupChat(Number(groupId), String(msg));
-
+    console.log("WAITING FOR TRANSACTION...");
     const result = await message.wait();
+    console.log("TRANSACTION SENT...");
 
     if (!result.status) {
       return { success: false };
@@ -599,6 +591,11 @@ export const sendMessage = async (groupId: number, msg: string) => {
       return { success: true };
     }
   } catch (error) {
+    console.log("FAILED SENDING MESSAGE...", {
+      errorMessage: error,
+      msg,
+      groupId,
+    });
     reportError(error);
     throw error;
   }

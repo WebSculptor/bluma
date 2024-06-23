@@ -4,10 +4,7 @@ import EventCard from "@/components/cards/event-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { site } from "@/constants";
-import { EventStatus, EventType, RegStatus } from "@/enums";
-import { getAllEvents, getEthereumContracts } from "@/services";
-import { ethers } from "ethers";
-import { CalendarSearch, Plus } from "lucide-react";
+import { getAllEvents, getBlumaContracts } from "@/services";
 import { IoCalendarOutline } from "react-icons/io5";
 
 import Link from "next/link";
@@ -34,7 +31,7 @@ export default function Home() {
     };
 
     const listenForEvent = async () => {
-      const contract = await getEthereumContracts();
+      const contract = await getBlumaContracts();
 
       contract.on(
         "EventCreated",

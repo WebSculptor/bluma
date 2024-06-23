@@ -1,16 +1,10 @@
-export enum RegStatus {
+export enum EnStatus {
   OPEN = 0,
   CLOSE = 1,
   PENDING = 2,
 }
 
-export enum EventStatus {
-  OPEN = 0,
-  CLOSE = 1,
-  PENDING = 2,
-}
-
-export enum EventType {
+export enum EnEvent {
   PAID = 0,
   FREE = 1,
 }

@@ -54,6 +54,7 @@ export default function Header() {
               "lg:max-w-[960px]":
                 pathname === "/" ||
                 pathname === "/create" ||
+                pathname === "/market" ||
                 pathname.includes("/event"),
             }
           )}>

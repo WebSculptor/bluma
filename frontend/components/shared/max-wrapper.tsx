@@ -12,6 +12,7 @@ export default function MaxWrapper({ children, className }: IWrapper) {
         "max-w-[960px]":
           pathname === "/" ||
           pathname === "/create" ||
+          pathname === "/market" ||
           pathname.includes("/event"),
         "max-w-[640px]": pathname.includes("/profile"),
       })}>

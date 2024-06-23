@@ -1,15 +1,11 @@
 "use client";
 
-import { cn, formatDate, shortenAddress } from "@/lib/utils";
+import { cn, shortenAddress } from "@/lib/utils";
 import { useGlobalContext } from "@/providers/global-provider";
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 import { useRouter } from "next/navigation";
-import { ethers } from "ethers";
-import { EventType } from "@/enums";
-import { FaEthereum } from "react-icons/fa";
-import { TbCashBanknoteOff } from "react-icons/tb";
 import { Badge } from "../ui/badge";
 import { format } from "date-fns";
 import moment from "moment";

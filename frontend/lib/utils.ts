@@ -2,6 +2,7 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import axios from "axios";
+import { EnStatus } from "@/enums";
 
 const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY!;
 const genAI = new GoogleGenerativeAI(apiKey);
@@ -89,7 +90,7 @@ export const blobToFile = (blob: any, fileName: any) => {
 };
 
 export const shortenAddress = (addr: string) => {
-  return `${addr?.substring(0, 6)}...${addr?.substring(addr.length - 4)}`;
+  return `${addr?.substring(0, 4)}...${addr?.substring(addr.length - 4)}`;
 };
 
 export const formatTime = (): string => {
@@ -215,4 +216,14 @@ export const timestampToDatetimeLocal = (timestamp: number): string => {
   const minutes = String(date.getMinutes()).padStart(2, "0");
 
   return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+export const getStatus = (now: any, start: number, end: number) => {
+  if (now < start) {
+    return EnStatus.PENDING;
+  } else if (now >= start && now <= end) {
+    return EnStatus.OPEN;
+  } else {
+    return EnStatus.CLOSE;
+  }
 };

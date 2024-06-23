@@ -25,7 +25,7 @@ export default function AuthLayout({ children }: ILayout) {
 
   return (
     <MaxWrapper className="flex-1 flex flex-col">
-      <div className="flex justify-center flex-col flex-1 items-center">
+      <div className="flex justify-center flex-col items-center my-20 md:my-28">
         {children}
       </div>
     </MaxWrapper>

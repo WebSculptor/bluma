@@ -4,7 +4,7 @@ import SendMessage from "@/components/shared/send-message";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, shortenAddress } from "@/lib/utils";
 import { useGlobalContext } from "@/providers/global-provider";
-import { getEthereumContracts, getEventGroupById } from "@/services";
+import { getBlumaContracts, getEventGroupById } from "@/services";
 import Image from "next/image";
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -53,7 +53,7 @@ export default function GroupChatPage({
     fetchData();
 
     const listenForEvent = async () => {
-      contract = await getEthereumContracts(); // Assign contract here
+      contract = await getBlumaContracts(); // Assign contract here
 
       const messageSentHandler = async (
         sender: any,

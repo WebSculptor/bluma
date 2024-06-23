@@ -10,6 +10,11 @@ export const otpSchema = z.object({
   }),
 });
 
+export const mintSchema = z.object({
+  tokens: z.string().min(2).max(50),
+  address: z.string().min(2).max(50),
+});
+
 export const createEventSchema = z.object({
   title: z
     .string()

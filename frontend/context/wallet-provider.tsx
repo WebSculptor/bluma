@@ -5,19 +5,11 @@ import { createWeb3Modal, defaultConfig } from "@web3modal/ethers/react";
 import { meterTestnet as mt } from "viem/chains";
 import { ReactNode } from "react";
 
-export const HARDHAT_CHAIN_ID: number = 31337;
+export const LOCALHOST_CHAIN_ID: number = 31337;
 
 const projectId = process.env.NEXT_PUBLIC_W3PROJECT_ID as string;
 
 if (!projectId) throw new Error("No project ID found");
-
-const localhost = {
-  chainId: HARDHAT_CHAIN_ID,
-  name: "Localhost 8545",
-  currency: "ETH",
-  explorerUrl: "http://127.0.0.1:8545",
-  rpcUrl: "http://127.0.0.1:8545",
-};
 
 const meterTestnet = {
   chainId: mt.id,
@@ -36,7 +28,7 @@ const metadata = {
 
 const ethersConfig = defaultConfig({
   metadata,
-  defaultChainId: 10,
+  defaultChainId: LOCALHOST_CHAIN_ID,
 });
 
 createWeb3Modal({

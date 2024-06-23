@@ -1,4 +1,4 @@
-import { Ticket, PencilLine } from "lucide-react";
+import { Ticket, PencilLine, ShoppingCart } from "lucide-react";
 
 export const nav_links = [
   {
@@ -10,6 +10,11 @@ export const nav_links = [
     name: "What's New",
     icon: PencilLine,
     path: "/update",
+  },
+  {
+    name: "Get Token",
+    icon: ShoppingCart,
+    path: "/market",
   },
 ];
 

@@ -95,3 +95,10 @@ interface IGlobalContextProvider {
   >;
   signOut: () => Promise<void>;
 }
+
+interface IPayment {
+  id: string;
+  tokens: number;
+  status: "pending" | "processing" | "success" | "failed";
+  address: string;
+}

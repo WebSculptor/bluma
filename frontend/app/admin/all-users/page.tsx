@@ -19,7 +19,7 @@ import {
   getAllEvents,
   getAllTicketsOfAUser,
   getAllUsers,
-  getEthereumContracts,
+  getBlumaContracts,
 } from "@/services";
 import { Copy, CopyCheck } from "lucide-react";
 import Image from "next/image";
