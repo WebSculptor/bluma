@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { site } from "@/constants";
 import { getAllEvents, getBlumaContracts } from "@/services";
 import { IoCalendarOutline } from "react-icons/io5";
+import { Plus } from "lucide-react";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";

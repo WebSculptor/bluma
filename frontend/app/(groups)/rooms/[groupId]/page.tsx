@@ -92,16 +92,13 @@ export default function GroupChatPage({
 
     listenForEvent();
 
-    // Cleanup function to remove the event listener when component unmounts
     return () => {
       if (contract) {
         contract.removeAllListeners("MessageSent");
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array to run only once when component mounts
+  }, []);
 
-  // Merge messages and member join events, then sort by timestamp
   const mergedItems = [
     ...(allMessages?.map((msg) => ({ type: "message", ...msg })) || []),
     ...(groupMembers?.map((member) => ({ type: "member", ...member })) || []),
