@@ -14,27 +14,39 @@ import {
 } from "@/components/ui/form";
 import { Button } from "../ui/button";
 import { useEffect, useState } from "react";
-import { sendMessage } from "@/services";
+import { sendMessage } from "@/services/bluma-contract";
 import { toast } from "sonner";
-import { CornerDownLeft, Loader, Plus } from "lucide-react"; // Import the CooldownTimer component
+import {
+  ArrowUpFromDot,
+  CornerDownLeft,
+  ImageIcon,
+  Loader,
+  MicIcon,
+  Plus,
+  VideoIcon,
+} from "lucide-react"; // Import the CooldownTimer component
+import { PiWarningOctagonLight } from "react-icons/pi";
+import { RocketIcon } from "@radix-ui/react-icons";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function SendMessage() {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
-  const [isCooldown, setIsCooldown] = useState(false);
+  const [isCoolDown, setIsCoolDown] = useState(false);
 
   const form = useForm<z.infer<typeof sendMessageSchema>>({
     resolver: zodResolver(sendMessageSchema),
     defaultValues: {},
   });
 
-  const handleCooldownComplete = () => {
-    setIsCooldown(false);
+  const handleCoolDownComplete = () => {
+    setIsCoolDown(false);
   };
 
   async function onSubmit(values: z.infer<typeof sendMessageSchema>) {
-    if (isCooldown) {
+    if (isCoolDown) {
       toast.error(
-        "Please wait for the cooldown period to end before sending another message."
+        "Please wait for the cool down period to end before sending another message."
       );
       return;
     }
@@ -45,7 +57,7 @@ export default function SendMessage() {
       if (data?.success) {
         toast.success("Message sent successfully! 🎉");
         form.reset({ message: "" });
-        setIsCooldown(true); // Start cooldown
+        setIsCoolDown(true); // Start cool down
       } else {
         toast.error("Something went wrong");
       }
@@ -57,57 +69,75 @@ export default function SendMessage() {
   }
 
   return (
-    <div className="flex w-full sticky bottom-0 bg-background border border-b-0 p-4 rounded-t-md">
-      {isCooldown ? (
-        <CooldownTimer
+    <div className="sticky bottom-0 rounded-full bg-background px-4 py-2 z-10">
+      {isCoolDown ? (
+        <CoolDownTimer
           initialSeconds={60}
-          onCooldownComplete={handleCooldownComplete}
+          onCoolDownComplete={handleCoolDownComplete}
         />
       ) : (
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="flex items-start w-full gap-4">
+            className="flex items-end w-full h-max">
             <Button
-              variant="secondary"
-              size="icon"
               disabled
-              className="size-8 rounded-full">
-              <Plus size={16} />
-              <span className="sr-only">Attachment</span>
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="rounded-full size-10 sm:size-11 hidden sm:flex">
+              <ImageIcon size={18} />
             </Button>
+            <Button
+              disabled
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="rounded-full size-10 sm:size-11 hidden md:flex">
+              <VideoIcon size={18} />
+            </Button>
+            <Button
+              disabled
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="rounded-full size-10 sm:size-11 hidden lg:flex">
+              <MicIcon size={18} />
+            </Button>
+
             <FormField
               disabled={isSendingMessage}
               control={form.control}
               name="message"
               render={({ field }) => (
-                <FormItem className="flex-1">
+                <FormItem className="ml-0 sm:ml-2 mr-2 flex-1 rounded-3xl bg-secondary/50 relative">
+                  <FormMessage className="absolute -top-6 left-5" />
                   <FormControl>
                     <TextareaAutosize
                       {...field}
                       minRows={1}
-                      maxRows={4}
+                      maxRows={6}
                       autoFocus
                       autoComplete="off"
                       placeholder="What would you like to say?"
                       disabled={isSendingMessage}
-                      className="w-full bg-transparent outline-none border-none text-sm disabled:opacity-50 disabled:cursor-not-allowed resize-none"
+                      className="w-full h-10 sm:h-11 px-4 pt-2.5 pb-1 sm:pt-3 sm:pb-1.5 sm:px-5 bg-transparent outline-none border-none text-sm disabled:opacity-50 disabled:cursor-not-allowed resize-none"
                     />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
 
             <Button
               type="submit"
-              size="icon"
               variant="secondary"
+              size="icon"
+              className="rounded-full size-10 sm:size-11"
               disabled={isSendingMessage}>
               {isSendingMessage ? (
                 <Loader size={16} className="animate-spin" />
               ) : (
-                <CornerDownLeft size={16} />
+                <CornerDownLeft size={17} />
               )}
               <span className="sr-only">Send message</span>
             </Button>
@@ -118,13 +148,13 @@ export default function SendMessage() {
   );
 }
 
-// Cooldown Timer Component
-const CooldownTimer = ({
+// Cool down Timer Component
+const CoolDownTimer = ({
   initialSeconds,
-  onCooldownComplete,
+  onCoolDownComplete,
 }: {
   initialSeconds: any;
-  onCooldownComplete: any;
+  onCoolDownComplete: any;
 }) => {
   const [seconds, setSeconds] = useState(initialSeconds);
 
@@ -136,24 +166,28 @@ const CooldownTimer = ({
 
       return () => clearInterval(timer); // Cleanup the interval on component unmount
     } else {
-      onCooldownComplete();
+      onCoolDownComplete();
     }
-  }, [seconds, onCooldownComplete]);
+  }, [seconds, onCoolDownComplete]);
 
   const formatTime = (seconds: any) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `00:${String(minutes).padStart(2, "0")}:${String(
+    return `${String(minutes).padStart(2, "0")}:${String(
       remainingSeconds
     ).padStart(2, "0")}`;
   };
 
   return (
-    <div className="flex flex-col w-full">
-      <div className="flex items-center justify-between w-full">
-        <p className="text-sm font-medium text-muted-foreground">Timeout</p>
-        <p className="text-sm font-medium">{formatTime(seconds)}</p>
-      </div>
-    </div>
+    <Alert>
+      <RocketIcon className="size-4" />
+      <AlertTitle className="flex items-center justify-between">
+        <span>Time Out!</span>
+        <span>{formatTime(seconds)}</span>
+      </AlertTitle>
+      <AlertDescription className="text-xs sm:text-[13px]">
+        Please wait 60 seconds between messages to prevent spam.
+      </AlertDescription>
+    </Alert>
   );
 };

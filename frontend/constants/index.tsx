@@ -39,3 +39,14 @@ export const Authenticating = {
   STOP: false,
   GENERATING: "generating",
 };
+
+export const bannerCIDs = [
+  "QmX68bpuiS63MgMXSnAS7V3k5xhiYA3L9n7qDmfZ6dqXa4",
+  "QmT2Atp4Pn9SBkpD25ePuGMngxuSeRRYMzdqDnLDbWEe58",
+  "QmdehrtoeNwcFdbKQFqcEVnViEHhuFN226riLZYbXNTrqV",
+  "QmY2y49AKysZgTPkaQHArx9u1Uag6Rpe8DRbyZ8j8eajwD",
+  "QmVYzRHesrW23MkdeUtj5qafbFqaBb5FJzLGHdskJrwM12",
+  "QmdbdSZDBQQ2tkrCcquZMhcFqWfxauvg5oyAnLm2zgg5E6",
+  "QmVgzAKuLzQimJJ5Hhy3Gd7KRME2dRm93xuMuoQM4bU4CL",
+  "QmdynREFrT5rRqxsnF8i8BYGiGs7irHwdsaJrmyEsYgR8k",
+];

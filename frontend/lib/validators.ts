@@ -46,5 +46,15 @@ export const createEventSchema = z.object({
 });
 
 export const sendMessageSchema = z.object({
-  message: z.string().min(2).max(700),
+  message: z
+    .string({
+      required_error:
+        "Please provide some text; the message field is not empty.",
+    })
+    .min(3, {
+      message: "A message must have a minimum of 3 characters.",
+    })
+    .max(700, {
+      message: "A message should contain no more than 700 characters.",
+    }),
 });

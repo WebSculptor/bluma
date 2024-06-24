@@ -11,20 +11,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import ProfileCard from "@/components/cards/profile-card";
-import LoadingProfileCard from "@/components/loaders/loading-profile-card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { shortenAddress } from "@/lib/utils";
 import {
   getAllEvents,
   getAllTicketsOfAUser,
   getAllUsers,
-  getBlumaContracts,
-} from "@/services";
-import { Copy, CopyCheck } from "lucide-react";
+} from "@/services/bluma-contract";
 import Image from "next/image";
 import Link from "next/link";
-import { toast } from "sonner";
 import { site } from "@/constants";
 
 export default function AllUsersPage() {

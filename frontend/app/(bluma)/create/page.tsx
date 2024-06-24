@@ -7,8 +7,8 @@ import { createEventSchema } from "@/lib/validators";
 import { Input } from "@/components/ui/input";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Globe, Loader, ScrollText, Sofa } from "lucide-react";
-import { useState } from "react";
-import { CreatingEvent } from "@/constants";
+import { useEffect, useState } from "react";
+import { CreatingEvent, bannerCIDs } from "@/constants";
 import Image from "next/image";
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
@@ -22,6 +22,8 @@ import { SiGooglemeet } from "react-icons/si";
 import { TbBrandYoutubeFilled } from "react-icons/tb";
 import { HiStatusOnline, HiStatusOffline } from "react-icons/hi";
 import { GrMapLocation } from "react-icons/gr";
+import { LiaRandomSolid } from "react-icons/lia";
+import { RiNftLine } from "react-icons/ri";
 
 import { toast } from "sonner";
 import {
@@ -51,14 +53,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-//? ICONS
 import { IoCalendarNumberOutline } from "react-icons/io5";
-import { IoCalendarOutline } from "react-icons/io5";
-import { TbTicket } from "react-icons/tb";
 import { HiOutlineLocationMarker } from "react-icons/hi";
 import { MdOutlineReduceCapacity } from "react-icons/md";
-import { createEvent } from "@/services";
+import { createEvent } from "@/services/bluma-contract";
 import { ethers } from "ethers";
 import { useRouter } from "next/navigation";
 import { FaCircle, FaRegCircle } from "react-icons/fa";
@@ -68,62 +66,12 @@ import { MdOutlineShareLocation } from "react-icons/md";
 import { useGlobalContext } from "@/providers/global-provider";
 import LoadDetails from "@/components/shared/load-details";
 import { createEventSuccessEmail } from "@/services/renderNotification";
-
-// export const eventLocationType = (
-//   location: string,
-//   size?: number,
-//   shouldShow?: boolean,
-//   className?: string
-// ) => {
-//   return (
-//     <span className={cn("flex items-center gap-2 text-sm", className)}>
-// {location && location.includes("meet.google.com") ? (
-//   <>
-//     Google Meet
-//     <SiGooglemeet
-//       size={size ? size : 16}
-//       className="text-sm text-muted-foreground min-w-[18px]"
-//     />
-//   </>
-// ) : location && location.includes("youtube.com") ? (
-//   <>
-//     YouTube
-//     <TbBrandYoutubeFilled
-//       size={size ? size : 16}
-//       className="text-sm text-muted-foreground min-w-[18px]"
-//     />
-//   </>
-// ) : location && location.includes("bit.ly") ? (
-//   <>
-//     Bitly
-//     <SiBitly
-//       size={size ? size : 16}
-//       className="text-sm text-muted-foreground min-w-[18px]"
-//     />
-//   </>
-// ) : location && location.includes("https://" || "http://") ? (
-//   <>
-//     {shouldShow ? location : "Online Location"}
-//     <HiStatusOnline
-//       size={size ? size : 16}
-//       className="text-sm text-muted-foreground min-w-[18px]"
-//     />
-//   </>
-// ) : (
-//   <>
-//     {shouldShow ? location : "Offline Location"}
-//     <GrMapLocation
-//       size={size ? size : 16}
-//       className="text-sm text-muted-foreground min-w-[18px]"
-//     />
-//   </>
-// )}
-//     </span>
-//   );
-// };
+import { BsImage } from "react-icons/bs";
+import { Label } from "@/components/ui/label";
 
 export default function CreateEventPage() {
   const router = useRouter();
+  const defaultNFT = "QmR2L6f8Z489SNoSP2rXeCEMv5V3Sf6TM4CZKEpjSMiQ4a";
 
   const { credentials, isFetchingUser } = useGlobalContext();
 
@@ -136,8 +84,10 @@ export default function CreateEventPage() {
     to: new Date(),
   });
   const [bannerUrl, setBannerUrl] = useState<File>();
+  const [eventNFT, setEventNFT] = useState<File>();
   const [prompt, setPrompt] = useState("");
   const [description, setDescription] = useState("");
+  const [randomBannerCID, setRandomBannerCID] = useState<string>(bannerCIDs[5]);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [openSuggestionBox, setOpenSuggestionBox] = useState(false);
@@ -151,7 +101,7 @@ export default function CreateEventPage() {
   const form = useForm<z.infer<typeof createEventSchema>>({
     resolver: zodResolver(createEventSchema),
     defaultValues: {
-      title: "",
+      title: "STARKNET/CAIRO MASTERCLASS",
       ticketCost: isEventFree ? 1 : 0,
       location: "https://bit.ly/4bQYpoO",
       capacity: 10,
@@ -160,13 +110,24 @@ export default function CreateEventPage() {
 
   async function onSubmit(values: z.infer<typeof createEventSchema>) {
     let banner;
+    let evtNft;
+
     try {
       if (bannerUrl === undefined) {
-        banner = "QmX68bpuiS63MgMXSnAS7V3k5xhiYA3L9n7qDmfZ6dqXa4";
-      } else if (bannerUrl !== undefined) {
+        banner = randomBannerCID;
+      } else {
         setIsCreating(CreatingEvent.UPLOADING);
         const cover = await uploadBannerToPinata(bannerUrl);
         banner = cover;
+        setIsCreating(CreatingEvent.STOP);
+      }
+
+      if (eventNFT === undefined) {
+        evtNft = defaultNFT;
+      } else {
+        setIsCreating(CreatingEvent.UPLOADING);
+        const nft = await uploadBannerToPinata(eventNFT);
+        evtNft = nft;
         setIsCreating(CreatingEvent.STOP);
       }
 
@@ -181,31 +142,31 @@ export default function CreateEventPage() {
         eventStartsTime: new Date(eventDate?.from as any).getTime(),
         eventEndsTime: new Date(eventDate?.to as any).getTime(),
         ticketPrice: Number(isEventFree ? 0 : values.ticketCost),
+        nftUrl: evtNft,
       };
 
-      if (refinedValues.description === "") {
-        return toast.error("Description can not be less than 5 characters.");
-      } else if (refinedValues.location === "") {
+      if (refinedValues.description.length < 5) {
+        return toast.error("Description must be at least 5 characters.");
+      }
+      if (!refinedValues.location) {
         return toast.error("Choose a venue for your event.", {
           description: "You need to provide a location for your event.",
         });
-      } else if (!refinedValues.regStartsTime || !refinedValues.regEndsTime) {
-        return toast.error("Give the date of registration.", {
-          description:
-            "Users must be informed when registration for the event opens or closed.",
+      }
+      if (!refinedValues.regStartsTime || !refinedValues.regEndsTime) {
+        return toast.error("Provide the registration dates.", {
+          description: "Users must know when registration opens and closes.",
         });
-      } else if (
-        !refinedValues.eventStartsTime ||
-        !refinedValues.eventEndsTime
-      ) {
-        return toast.error("Add the event's date.", {
+      }
+      if (!refinedValues.eventStartsTime || !refinedValues.eventEndsTime) {
+        return toast.error("Provide the event dates.", {
           description:
             "Users need to know the start and end times of your event.",
         });
       }
-
-      if (refinedValues.imageUrl === undefined)
+      if (!refinedValues.imageUrl) {
         return toast.error("Could not upload banner to IPFS.");
+      }
 
       setIsCreating(CreatingEvent.START);
 
@@ -254,11 +215,20 @@ export default function CreateEventPage() {
     }
   };
 
+  const getRandomBanner = () => {
+    const randomIndex = Math.floor(Math.random() * bannerCIDs.length);
+    setRandomBannerCID(bannerCIDs[randomIndex]);
+  };
+
+  useEffect(() => {
+    return () => getRandomBanner();
+  }, []);
+
   if (isFetchingUser) return <LoadDetails />;
 
   return (
     <div className="flex flex-col md:flex-row gap-12 md:gap-8">
-      <div className="flex flex-col gap-4 max-w-full md:max-w-[350px] w-full h-max">
+      <div className="flex flex-col gap-4 md:gap-6 max-w-full md:max-w-[350px] w-full h-max">
         <div className="w-full bg-secondary/50 rounded-xl aspect-square relative">
           {isCreating === CreatingEvent.UPLOADING && (
             <div className="absolute bg-background/50 backdrop-blur-sm rounded-[inherit] size-full top-0 left-0 z-10 flex items-center justify-center">
@@ -269,44 +239,107 @@ export default function CreateEventPage() {
             src={
               bannerUrl
                 ? URL.createObjectURL(bannerUrl)
-                : "/assets/invited-banner.avif"
+                : `https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${randomBannerCID}`
             }
             alt="banner"
             fill
             priority
+            sizes="auto"
             className={cn("rounded-[inherit] size-full pointer-events-none", {
               "opacity-50 cursor-not-allowed":
-                isCreating !== CreatingEvent.STOP,
+                isCreating !== CreatingEvent.STOP || !credentials,
             })}
           />
+          {isCreating === CreatingEvent.STOP && (
+            <>
+              <Input
+                hidden
+                className="hidden opacity-0"
+                type="file"
+                accept="image/*"
+                id="banner"
+                onChange={(e: any) => setBannerUrl(e.target.files[0])}
+                disabled={isCreating !== CreatingEvent.STOP || !credentials}
+              />
+              <Label
+                htmlFor="banner"
+                className="absolute bottom-2 right-2 border-2 rounded-[50%] size-11 cursor-pointer p-0 bg-secondary-foreground text-primary-foreground flex items-center justify-center">
+                <BsImage size={16} />
+              </Label>
+
+              <div
+                onClick={getRandomBanner}
+                className="absolute top-2 left-2 border-2 rounded-[50%] size-11 cursor-pointer p-0 bg-secondary-foreground text-primary-foreground flex items-center justify-center">
+                <LiaRandomSolid size={18} />
+              </div>
+            </>
+          )}
         </div>
 
-        <div className="rounded-lg bg-secondary/50 p-1 flex gap-1 mx-auto w-[calc(100%-10%)] md:w-full">
+        <>
           <Input
             hidden
             className="hidden opacity-0"
             type="file"
             accept="image/*"
-            id="banner"
-            onChange={(e: any) => setBannerUrl(e.target.files[0])}
+            id="nft"
+            onChange={(e: any) => setEventNFT(e.target.files[0])}
             disabled={isCreating !== CreatingEvent.STOP || !credentials}
           />
-          <label
-            htmlFor="banner"
-            className={buttonVariants({
-              className: `w-1/2 cursor-pointer disabled:cursor-not-allowed ${
-                isCreating !== CreatingEvent.STOP
-                  ? "pointer-events-none opacity-50 cursor-not-allowed"
-                  : ""
-              }`,
-              variant: "secondary",
-            })}>
-            Select Image
-          </label>
-          <Button className="w-1/2" variant="secondary" disabled>
-            Generate Image
-          </Button>
-        </div>
+          <Label
+            htmlFor="nft"
+            className={cn(
+              "rounded-lg bg-secondary/50 p-2 pr-3 flex gap-2 items-center justify-between mx-auto w-[calc(100%-10%)] md:w-full h-14 border cursor-pointer relative",
+              {
+                "border-0": isCreating === CreatingEvent.UPLOADING,
+                "cursor-not-allowed opacity-50":
+                  isCreating !== CreatingEvent.STOP || !credentials,
+              }
+            )}>
+            {isCreating === CreatingEvent.UPLOADING && (
+              <div className="absolute bg-background/50 backdrop-blur-sm rounded-[inherit] size-full top-0 left-0 z-10 flex items-center justify-center">
+                <Loader size={18} className="animate-spin" />
+              </div>
+            )}
+            <div className="flex items-center gap-2 h-full">
+              <div className="w-12 h-full bg-foreground rounded-sm relative overflow-hidden">
+                <Image
+                  src={
+                    eventNFT
+                      ? URL.createObjectURL(eventNFT)
+                      : `https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${defaultNFT}`
+                  }
+                  alt="event-nft"
+                  fill
+                  priority
+                  className="size-full"
+                />
+              </div>
+
+              {eventNFT ? (
+                <div className="flex-1">
+                  <h1 className="text-sm select-none uppercase font-semibold">
+                    NFT Selected
+                  </h1>
+                  <p className="text-xs opacity-50">
+                    It will be distributed to participants
+                  </p>
+                </div>
+              ) : (
+                <div className="flex-1">
+                  <h1 className="text-sm select-none uppercase font-semibold">
+                    Upload NFT
+                  </h1>
+                  <p className="text-xs opacity-50">
+                    Select your own NFT or use the preset.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <RiNftLine size={20} className="text-muted-foreground" />
+          </Label>
+        </>
       </div>
 
       <Form {...form}>
@@ -726,7 +759,7 @@ export default function CreateEventPage() {
                       />
                       <p className="border-b py-3 pr-3 w-full text-sm flex items-center justify-between">
                         <span className="text-foreground">Event Location</span>
-                        <span className="flex items-center text-muted-foreground">
+                        <span className="flex items-center text-muted-foreground gap-2">
                           {field.value &&
                           field.value.includes("meet.google.com") ? (
                             <>

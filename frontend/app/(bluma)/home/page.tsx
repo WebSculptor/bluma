@@ -4,12 +4,13 @@ import EventCard from "@/components/cards/event-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { site } from "@/constants";
-import { getAllEvents, getBlumaContracts } from "@/services";
+import { getBlumaContracts } from "@/services";
 import { IoCalendarOutline } from "react-icons/io5";
 import { Plus } from "lucide-react";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { getAllEvents } from "@/services/bluma-contract";
 
 export default function Home() {
   const [events, setEvents] = useState<IEvent[] | undefined>([]);
@@ -31,31 +32,22 @@ export default function Home() {
       }
     };
 
-    const listenForEvent = async () => {
+    (async () => {
       const contract = await getBlumaContracts();
 
       contract.on(
         "EventCreated",
         async (_totalEventsId, _seatNumber, _capacity) => {
-          try {
-            const evt: IEvent[] | any = await getAllEvents();
-
-            setEvents(evt);
-          } catch (error: any) {
-            console.log("COULD NOT FETCH EVENT", error);
-          } finally {
-            setIsFetchingEvents(false);
-          }
+          await fetchEvents();
         }
       );
 
       return () => {
         contract.removeAllListeners("EventCreated");
       };
-    };
+    })();
 
     fetchEvents();
-    listenForEvent();
   }, []);
 
   return (

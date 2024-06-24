@@ -44,3 +44,6 @@ next-env.d.ts
 
 # debugging
 code_context.txt
+
+.vscode
+test.txt

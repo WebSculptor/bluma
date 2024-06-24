@@ -8,12 +8,13 @@ import React, {
   useMemo,
 } from "react";
 import NextTopLoader from "nextjs-toploader";
-import { Toaster } from "@/components/ui/sonner";
 import { firebaseAuth, firestore } from "@/config/firbase";
 import { doc, getDoc } from "firebase/firestore";
 import { Timestamp } from "firebase/firestore";
 import { signOut as firebaseSignOut } from "firebase/auth";
 import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
+import { Toaster as Notifier } from "@/components/ui/toaster";
 
 // Create Context
 const GlobalContext = React.createContext<IGlobalContextProvider | undefined>(
@@ -114,6 +115,7 @@ export default function GlobalContextProvider({ children }: ILayout) {
   return (
     <GlobalContext.Provider value={propsValue}>
       <Toaster richColors theme="dark" />
+      <Notifier />
       <NextTopLoader showSpinner={false} color="hsl(var(--primary))" />
       {children}
     </GlobalContext.Provider>

@@ -17,19 +17,33 @@ import {
 import { Input } from "@/components/ui/input";
 
 import { site } from "@/constants";
-import { shortenAddress } from "@/lib/utils";
-import { useState } from "react";
+import { convertScientificNotation, shortenAddress } from "@/lib/utils";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { mintSchema } from "@/lib/validators";
 import { Transactions } from "@/components/shared/transactions";
 import { useWeb3Modal, useWeb3ModalAccount } from "@web3modal/ethers/react";
+import {
+  checkIfUserHasMinted,
+  getTokenTotalSupply,
+  getUserBalance,
+  mintTokenToUser,
+} from "@/services/bluma-token";
+import { Loader } from "lucide-react";
+import { getBlumaTokenContract } from "@/services";
 
 export default function MarketPage() {
   const { isConnected, address } = useWeb3ModalAccount();
   const { open } = useWeb3Modal();
 
   const [copied, setCopied] = useState(false);
+  const [isMintingToken, setIsMintingToken] = useState(false);
   const [mintedTokens, setMintedTokens] = useState<IPayment[]>([]);
+
+  const [userBalance, setUserBalance] = useState<number | string>(0);
+  const [totalSupply, setTotalSupply] = useState<number | string>(0);
+  const [remainingSupply, setRemainingSupply] = useState<number | string>(0);
+  const [hasMinted, setHasMinted] = useState(false);
 
   // 1. Define your form.
   const form = useForm<z.infer<typeof mintSchema>>({
@@ -41,19 +55,18 @@ export default function MarketPage() {
   });
 
   // 2. Define a submit handler.
-  function onSubmit(values: z.infer<typeof mintSchema>) {
-    // Do something with the form values.
-    // ✅ This will be type-safe and validated.
-    console.log(values);
-    setMintedTokens((prev) => [
-      ...prev,
-      {
-        id: String(1),
-        tokens: Number(values.tokens),
-        status: "success",
-        address: String(values.address),
-      },
-    ]);
+  async function onSubmit(values: z.infer<typeof mintSchema>) {
+    if (!address) return toast.error("Please connect your wallet address");
+    setIsMintingToken(true);
+
+    try {
+      const result = await mintTokenToUser(values?.address, values?.tokens);
+      console.log(result);
+    } catch (error: any) {
+      console.log("ERROR MINTING TOKEN: ", error);
+    } finally {
+      setIsMintingToken(false);
+    }
   }
 
   const handleCopy = (text: string) => {
@@ -70,6 +83,38 @@ export default function MarketPage() {
       });
   };
 
+  const fetchData = async (address: string) => {
+    const totalSupply = await getTokenTotalSupply();
+    const hasMinted = await checkIfUserHasMinted(address);
+    const balance = await getUserBalance(address);
+
+    console.log({ hasMinted });
+
+    setUserBalance(Number(balance).toString());
+    setTotalSupply(totalSupply.toString());
+    setRemainingSupply(Number(totalSupply) - Number(balance));
+    setHasMinted(hasMinted);
+  };
+
+  useEffect(() => {
+    (async () => {
+      const contract = await getBlumaTokenContract();
+      contract.on("TransferSuccessful", async (_user, _amount) => {
+        await fetchData(`${address}`);
+      });
+    })();
+
+    fetchData(`${address}`);
+  }, []);
+
+  useEffect(() => {
+    if (address) {
+      (async () => {
+        await fetchData(`${address}`);
+      })();
+    }
+  }, [address]);
+
   return (
     <div className="flex flex-col">
       <div className="flex flex-col gap-2 items-start justify-start sm:flex-row sm:justify-end sm:items-center sm:gap-4 w-full">
@@ -77,7 +122,7 @@ export default function MarketPage() {
           <div className="p-1.5 bg-secondary rounded-lg w-full sm:w-max">
             <div className="px-4 sm:px-3 py-2.5 sm:py-1.5 bg-background rounded-md">
               <p className="text-xs md:text-sm">
-                Balance: <b>0 BLUM</b>
+                Balance: <b>{userBalance} BLUM</b>
               </p>
             </div>
           </div>
@@ -138,7 +183,9 @@ export default function MarketPage() {
                   <p className="text-xs sm:text-sm font-medium opacity-75">
                     Total Supply
                   </p>
-                  <h1 className="text-base sm:text-lg font-bold">1,000,000</h1>
+                  <h1 className="text-base sm:text-lg font-bold">
+                    {totalSupply}
+                  </h1>
                 </div>
               </div>
               <div className="flex flex-col bg-secondary rounded-lg p-1.5 sm:p-2">
@@ -146,7 +193,9 @@ export default function MarketPage() {
                   <p className="text-xs sm:text-sm font-medium opacity-75">
                     Tokens Left
                   </p>
-                  <h1 className="text-base sm:text-lg font-bold">500,000</h1>
+                  <h1 className="text-base sm:text-lg font-bold">
+                    {remainingSupply}
+                  </h1>
                 </div>
               </div>
             </div>
@@ -165,6 +214,7 @@ export default function MarketPage() {
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="flex flex-col gap-2">
                 <FormField
+                  disabled={isMintingToken || !isConnected || hasMinted}
                   control={form.control}
                   name="tokens"
                   render={({ field }) => (
@@ -175,6 +225,7 @@ export default function MarketPage() {
                           className="h-11 px-4"
                           placeholder="Enter number of tokens"
                           type="number"
+                          disabled={isMintingToken || !isConnected || hasMinted}
                           {...field}
                         />
                       </FormControl>
@@ -194,7 +245,11 @@ export default function MarketPage() {
                       <FormControl>
                         <Input
                           className="h-11 px-4"
-                          disabled={!!address && isConnected}
+                          disabled={
+                            (!!address && isConnected) ||
+                            isMintingToken ||
+                            hasMinted
+                          }
                           placeholder="Enter wallet address"
                           type="string"
                           {...field}
@@ -204,8 +259,20 @@ export default function MarketPage() {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="mt-4">
-                  Mint Tokens
+                <Button
+                  type="submit"
+                  className="mt-4"
+                  disabled={isMintingToken || !isConnected || hasMinted}>
+                  {hasMinted ? (
+                    "Already Minted"
+                  ) : isMintingToken ? (
+                    <>
+                      <Loader size={16} className="animate-spin mr-2" />{" "}
+                      Minting...
+                    </>
+                  ) : (
+                    "Mint Tokens"
+                  )}
                 </Button>
               </form>
             </Form>

@@ -35,7 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Asterisk, FileDigit, Loader, MailCheck, ScanFace } from "lucide-react";
 import { IoWalletOutline } from "react-icons/io5";
 import Image from "next/image";
-import { createAccount, getUser } from "@/services";
+import { createAccount, getUser } from "@/services/bluma-contract";
 import { useGlobalContext } from "@/providers/global-provider";
 import { useRouter } from "next/navigation";
 import { signInWithCustomToken } from "firebase/auth";
@@ -332,8 +332,8 @@ const EmailForm = ({
       <Link
         href="/market"
         className="text-sm text-muted-foreground text-center">
-        To continue using {site.name}, mint some{" "}
-        <b className="underline text-primary">BLUM</b> tokens.
+        Mint some <b className="underline text-primary">BLUM</b> tokens to keep
+        using {site.name}.
       </Link>
     </div>
   );

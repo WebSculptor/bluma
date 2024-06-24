@@ -3,18 +3,19 @@
 import EventCard from "@/components/cards/event-card";
 import ProfileCard from "@/components/cards/profile-card";
 import LoadingProfileCard from "@/components/loaders/loading-profile-card";
-import LoadingScreen from "@/components/shared/loading-screen";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn, shortenAddress } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useGlobalContext } from "@/providers/global-provider";
-import { getAllEvents, getAllTicketsOfAUser, getUser } from "@/services";
-import { Copy, CopyCheck, Plus } from "lucide-react";
-import Image from "next/image";
+import {
+  getAllEvents,
+  getAllTicketsOfAUser,
+  getUser,
+} from "@/services/bluma-contract";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { IoCalendarOutline } from "react-icons/io5";
-import { toast } from "sonner";
 
 export default function ProfilePage({
   params: { address },

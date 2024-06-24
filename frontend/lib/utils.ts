@@ -227,3 +227,11 @@ export const getStatus = (now: any, start: number, end: number) => {
     return EnStatus.CLOSE;
   }
 };
+
+export const convertScientificNotation = (num: number) => {
+  if (typeof num !== "number") {
+    throw new TypeError("Input must be a number");
+  }
+
+  return num.toLocaleString("fullwide", { useGrouping: false });
+};

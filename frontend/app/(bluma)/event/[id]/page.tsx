@@ -11,17 +11,15 @@ import {
   getStatus,
   shortenAddress,
 } from "@/lib/utils";
+import { getBlumaContracts } from "@/services";
 import {
   getAllTicketsOfAnEvent,
-  getBlumaContracts,
   getEventById,
   getGroupMembersOfAnEvent,
   getUser,
   joinGroup,
   purchaseTicket,
-} from "@/services";
-import { useWeb3ModalAccount } from "@web3modal/ethers/react";
-import { ethers } from "ethers";
+} from "@/services/bluma-contract";
 import Image from "next/image";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
@@ -46,7 +44,6 @@ import { useGlobalContext } from "@/providers/global-provider";
 import { SiBitly, SiGooglemeet } from "react-icons/si";
 import { TbBrandYoutubeFilled } from "react-icons/tb";
 import { HiStatusOnline } from "react-icons/hi";
-import { GrMapLocation } from "react-icons/gr";
 
 let ethereum: any;
 if (typeof window !== "undefined") ethereum = (window as any).ethereum;

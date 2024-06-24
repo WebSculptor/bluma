@@ -63,7 +63,8 @@
         "internalType": "uint256"
       },
       { "name": "_ticketPrice", "type": "uint96", "internalType": "uint96" },
-      { "name": "_isEventPaid", "type": "bool", "internalType": "bool" }
+      { "name": "_isEventPaid", "type": "bool", "internalType": "bool" },
+      { "name": "_nftUrl", "type": "string", "internalType": "string" }
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
@@ -174,6 +175,7 @@
             "type": "uint8",
             "internalType": "enum BlumaProtocol.EventType"
           },
+          { "name": "nftUrl", "type": "string", "internalType": "string" },
           {
             "name": "eventStartTime",
             "type": "uint256",
@@ -199,7 +201,8 @@
             "type": "uint256",
             "internalType": "uint256"
           },
-          { "name": "isCreatorPaid", "type": "bool", "internalType": "bool" }
+          { "name": "isCreatorPaid", "type": "bool", "internalType": "bool" },
+          { "name": "hasMinted", "type": "bool", "internalType": "bool" }
         ]
       }
     ],
@@ -336,6 +339,7 @@
             "type": "uint8",
             "internalType": "enum BlumaProtocol.EventType"
           },
+          { "name": "nftUrl", "type": "string", "internalType": "string" },
           {
             "name": "eventStartTime",
             "type": "uint256",
@@ -361,7 +365,8 @@
             "type": "uint256",
             "internalType": "uint256"
           },
-          { "name": "isCreatorPaid", "type": "bool", "internalType": "bool" }
+          { "name": "isCreatorPaid", "type": "bool", "internalType": "bool" },
+          { "name": "hasMinted", "type": "bool", "internalType": "bool" }
         ]
       }
     ],
@@ -425,6 +430,17 @@
           }
         ]
       }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getEventNFTs",
+    "inputs": [
+      { "name": "_eventId", "type": "uint32", "internalType": "uint32" }
+    ],
+    "outputs": [
+      { "name": "", "type": "uint256[]", "internalType": "uint256[]" }
     ],
     "stateMutability": "view"
   },
@@ -530,6 +546,17 @@
   },
   {
     "type": "function",
+    "name": "getUserNFTs_",
+    "inputs": [
+      { "name": "_user", "type": "address", "internalType": "address" }
+    ],
+    "outputs": [
+      { "name": "", "type": "uint256[]", "internalType": "uint256[]" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "groupChat",
     "inputs": [
       { "name": "_groupId", "type": "uint32", "internalType": "uint32" },
@@ -540,9 +567,25 @@
   },
   {
     "type": "function",
+    "name": "hasPurchasedTicket",
+    "inputs": [
+      { "name": "_user", "type": "address", "internalType": "address" },
+      { "name": "_eventId", "type": "uint32", "internalType": "uint32" }
+    ],
+    "outputs": [{ "name": "", "type": "bool", "internalType": "bool" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "initialize",
     "inputs": [
-      { "name": "initialOwner", "type": "address", "internalType": "address" }
+      {
+        "name": "initialOwner",
+        "type": "address",
+        "internalType": "address"
+      },
+      { "name": "_blumaToken", "type": "address", "internalType": "address" },
+      { "name": "_blumaNFT", "type": "address", "internalType": "address" }
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
@@ -559,6 +602,15 @@
   {
     "type": "function",
     "name": "joinGroup",
+    "inputs": [
+      { "name": "_eventId", "type": "uint32", "internalType": "uint32" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "mintNFTsForAttendees",
     "inputs": [
       { "name": "_eventId", "type": "uint32", "internalType": "uint32" }
     ],
@@ -654,6 +706,37 @@
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "AttendeesNFTMinted",
+    "inputs": [
+      {
+        "name": "owner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "eventId",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "numberOfTickets",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
+      },
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -932,6 +1015,7 @@
   { "type": "error", "name": "INVALID_NOT_AUTHORIZED", "inputs": [] },
   { "type": "error", "name": "INVALID_TIME_SET", "inputs": [] },
   { "type": "error", "name": "InvalidInitialization", "inputs": [] },
+  { "type": "error", "name": "NFT_ALREADY_MINTED", "inputs": [] },
   { "type": "error", "name": "NOT_CREATOR", "inputs": [] },
   { "type": "error", "name": "NOT_ENOUGH_AVAILABLE_SEAT", "inputs": [] },
   { "type": "error", "name": "NOT_OWNER", "inputs": [] },
@@ -953,6 +1037,7 @@
     ]
   },
   { "type": "error", "name": "REGISTRATION_CLOSE", "inputs": [] },
+  { "type": "error", "name": "REGISTRATION_NOT_CLOSED", "inputs": [] },
   { "type": "error", "name": "REGISTRATION_NOT_OPEN", "inputs": [] },
   { "type": "error", "name": "USER_NOT_REGISTERED", "inputs": [] },
   { "type": "error", "name": "UUPSUnauthorizedCallContext", "inputs": [] },

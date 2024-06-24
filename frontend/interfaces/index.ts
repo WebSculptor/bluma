@@ -55,6 +55,7 @@ interface IEvent {
   regStatus: string | number;
   eventStatus: string | number;
   eventType: string | number;
+  nftUrl: string;
   eventStartsTime: number;
   eventEndsTime: number;
   ticketPrice: number;
@@ -75,6 +76,7 @@ type ICreateEvent = Pick<
   | "regStartsTime"
   | "eventEndsTime"
   | "eventStartsTime"
+  | "nftUrl"
 >;
 
 interface IMessage {
