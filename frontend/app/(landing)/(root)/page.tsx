@@ -13,16 +13,22 @@ export default function RootPage() {
       <MaxWrapper className="flex-1 flex flex-col">
         <div className="flex justify-center items-center flex-1 flex-col lg:flex-row gap-8 md:gap-4">
           <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-start">
-            <h1 className="font-bold md:font-black text-4xl md:text-5xl lg:text-6xl lg:leading-[66px]">
-              Delightful events
+            <h1 className="font-black text-4xl md:text-5xl lg:text-6xl lg:leading-[66px]">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#4479F5] via-[#EF57C6] to-[#FF6F48]">
+                Delightful
+              </span>{" "}
+              events
             </h1>
-            <h1 className="font-bold md:font-black text-4xl md:text-5xl lg:text-6xl lg:leading-[66px] text-transparent bg-clip-text bg-gradient-to-r from-[#4479F5] via-[#EF57C6] to-[#FF6F48]">
-              start here.
+            <h1 className="font-black text-4xl md:text-5xl lg:text-6xl lg:leading-[66px]">
+              starts{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#4479F5] via-[#EF57C6] to-[#FF6F48]">
+                here
+              </span>
             </h1>
 
-            <p className="font-medium text-base md:text-lg mt-2 md:mt-5 mb-4 md:mb-7">
-              Set up an event page, invite friends and sell tickets. Host a
-              memorable event today.
+            <p className="font-medium text-sm sm:text-base md:text-lg mt-2 md:mt-5 mb-4 md:mb-7">
+              Create event, sell tickets, chat with guests, and mint NFTs for
+              attendees. Begin planning your unique event trip today.
             </p>
 
             <Button asChild size="lg" className="hidden md:flex">
@@ -48,9 +54,10 @@ export default function RootPage() {
             <Image
               src="/assets/landing.png"
               alt="landing"
-              width={1250}
-              height={1324}
+              width={1150}
+              height={1224}
               priority
+              quality={100}
               className="size-full object-contain flex md:hidden"
             />
           </div>

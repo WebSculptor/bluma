@@ -4,7 +4,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -23,7 +22,6 @@ import Logo from "./logo";
 import { useGlobalContext } from "@/providers/global-provider";
 import { useWeb3Modal } from "@web3modal/ethers/react";
 import { LogOutModal } from "./logout-modal";
-import { useEffect, useState } from "react";
 import { CgMenuRightAlt } from "react-icons/cg";
 import {
   Sheet,
@@ -37,11 +35,10 @@ export default function Header() {
 
   const { open } = useWeb3Modal();
 
-  const { isAuthenticated, setIsAuthenticated, credentials, isFetchingUser } =
-    useGlobalContext();
+  const { isAuthenticated, credentials } = useGlobalContext();
 
   return (
-    <header className="px-4 py-3 flex items-center justify-between md:justify-normal backdrop-blur-3xl gap-6 md:gap-0 sticky top-0 z-50">
+    <header className="px-4 py-3 flex items-center justify-between md:justify-normal bg-background gap-6 md:gap-0 sticky top-0 z-50">
       <div className="w-max xl:w-[350px]">
         <Logo />
       </div>
@@ -56,6 +53,7 @@ export default function Header() {
                 pathname === "/create" ||
                 pathname === "/market" ||
                 pathname.includes("/event"),
+              "lg:max-w-[640px]": pathname.includes("/profile"),
             }
           )}>
           {nav_links.map((link) => {
@@ -119,26 +117,18 @@ export default function Header() {
               <DropdownMenuTrigger className="rounded-full">
                 <ProfilePicture
                   size="sm"
-                  src={
-                    credentials && credentials?.avatar
-                      ? `https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${credentials?.avatar}`
-                      : "/assets/logo.png"
-                  }
+                  src={`https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${credentials?.avatar}`}
                   initials={"AS"}
                 />
               </DropdownMenuTrigger>
               <DropdownMenuContent className="mr-4 mt-2 w-[260px]">
-                <DropdownMenuLabel asChild>
+                <DropdownMenuItem asChild>
                   <Link
-                    href="/profile"
+                    href={`/profile/${credentials?.address}`}
                     className="flex items-center gap-3 flex-1 p-3 hover:bg-secondary/50 rounded-sm">
                     <ProfilePicture
                       size="default"
-                      src={
-                        credentials && credentials?.avatar
-                          ? `https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${credentials?.avatar}`
-                          : "/assets/logo.png"
-                      }
+                      src={`https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${credentials?.avatar}`}
                       initials={"AS"}
                     />
 
@@ -157,7 +147,7 @@ export default function Header() {
                       </p>
                     </div>
                   </Link>
-                </DropdownMenuLabel>
+                </DropdownMenuItem>
 
                 <DropdownMenuSeparator />
 

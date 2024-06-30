@@ -5,20 +5,25 @@ import { Button } from "@/components/ui/button";
 import { EnEvent, EnStatus } from "@/enums";
 import {
   calculateDateDifference,
+  cn,
   formatDate,
   formatReadableDate,
   getExpiryDate,
   getStatus,
   shortenAddress,
+  uploadBannerToPinata,
 } from "@/lib/utils";
 import { getBlumaContracts } from "@/services";
 import {
+  createSpace,
   getAllTicketsOfAnEvent,
   getEventById,
   getGroupMembersOfAnEvent,
-  getUser,
   joinGroup,
+  mintNFT,
   purchaseTicket,
+  refundFee,
+  withdrawEventFee,
 } from "@/services/bluma-contract";
 import Image from "next/image";
 import Link from "next/link";
@@ -26,14 +31,21 @@ import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { MdPayments } from "react-icons/md";
 import { Input } from "@/components/ui/input";
-import { AlarmClock, Locate, Loader, Info } from "lucide-react";
+import {
+  Locate,
+  Loader,
+  Info,
+  UploadIcon,
+  X,
+  Clock,
+  Coins,
+} from "lucide-react";
 import { Label } from "@/components/ui/label";
 import LoadDetails from "@/components/shared/load-details";
 import { format } from "date-fns";
@@ -44,9 +56,12 @@ import { useGlobalContext } from "@/providers/global-provider";
 import { SiBitly, SiGooglemeet } from "react-icons/si";
 import { TbBrandYoutubeFilled } from "react-icons/tb";
 import { HiStatusOnline } from "react-icons/hi";
-
-let ethereum: any;
-if (typeof window !== "undefined") ethereum = (window as any).ethereum;
+import { RiNftLine, RiShareForward2Fill } from "react-icons/ri";
+import { MintingNFT } from "@/constants";
+import {
+  emitEventNotification,
+  purchaseTicketSuccessEmail,
+} from "@/services/renderNotification";
 
 export default function EventDetails({ params }: { params: { id: number } }) {
   const { credentials } = useGlobalContext();
@@ -54,13 +69,9 @@ export default function EventDetails({ params }: { params: { id: number } }) {
   const [isFetchingEventDetails, setIsFetchingEventDetails] =
     useState<boolean>(true);
   const [event, setEvent] = useState<IEvent | undefined>();
-  const [eventOwner, setEventOwner] = useState<IUserCredentials | undefined>();
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [numTicket, setNumTicket] = useState();
-
   const [ticketBuyers, setTicketBuyers] = useState<any[] | undefined>([]);
-  const [groupMembers, setGroupMembers] = useState([]);
-
   const [hasJoinedGroup, setHasJoinedGroup] = useState(false);
   const [hasBoughtTicket, setHasBoughtTicket] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -69,8 +80,9 @@ export default function EventDetails({ params }: { params: { id: number } }) {
 
   const fetchEventData = async (eventId: number) => {
     try {
-      // ? GETTING EVENT
       const event = await getEventById(eventId);
+      const allTickets = await getAllTicketsOfAnEvent(eventId);
+
       if (event) {
         setEvent(event);
 
@@ -88,52 +100,47 @@ export default function EventDetails({ params }: { params: { id: number } }) {
           setLocationType("offline");
         }
 
-        // ? GET EVENT OWNER
-        const currentEventOwner = await getUser(event?.owner);
-        setEventOwner(currentEventOwner);
+        const isAdmin =
+          event?.owner?.address.toLowerCase().toString() ===
+          credentials?.address.toLowerCase().toString();
+        setIsAdmin(isAdmin);
 
-        if (
-          currentEventOwner?.address.toLowerCase().toString() ===
-          credentials?.address.toLowerCase().toString()
-        ) {
-          setIsAdmin(true);
-        } else {
-          setIsAdmin(false);
-        }
-      }
+        // Filter out the admin from the ticket buyers
+        const nonAdminTicketBuyers = allTickets.filter(
+          (ticket: any) =>
+            ticket.buyer.toLowerCase() !== event?.owner?.address.toLowerCase()
+        );
 
-      // ? GET ALL TICKET BUYERS
-      const whoBoughtTicket = await getAllTicketsOfAnEvent(eventId);
-      if (whoBoughtTicket) {
-        setTicketBuyers(whoBoughtTicket);
+        // Set the ticket buyers excluding the admin
+        setTicketBuyers(nonAdminTicketBuyers);
 
-        // ? CHECK IF CURRENT USER HAS BOUGHT TICKET
-        const hasBoughtTicket = whoBoughtTicket?.some(
-          (user: any) => user?.address === credentials?.address
+        // Check if the current user has bought a ticket
+        const hasBoughtTicket = nonAdminTicketBuyers.some(
+          (ticket: any) =>
+            ticket.buyer.toLowerCase() === credentials?.address.toLowerCase()
         );
         setHasBoughtTicket(hasBoughtTicket);
       }
 
-      // ? GET EVENT GROUP MEMBERS
+      // Get event group members
       const members = await getGroupMembersOfAnEvent(eventId);
       if (members) {
-        setGroupMembers(members);
-
-        // ? CHECK IF CURRENT USER IS IN GROUP
-        const isMemberInGroup = members?.some(
-          (member: any) => member?.address === credentials?.address
+        // Check if current user is in the group
+        const isMemberInGroup = members.some(
+          (member: any) =>
+            member.address.toLowerCase() === credentials?.address.toLowerCase()
         );
         setHasJoinedGroup(isMemberInGroup);
       }
 
       return true;
     } catch (error: any) {
-      console.log("FAILD TO FETCH EVENT:", error);
+      console.log("FAILED TO FETCH EVENT:", error);
     }
   };
 
   useEffect(() => {
-    const fetchData = async () => {
+    (async () => {
       setIsFetchingEventDetails(true);
       try {
         const data = await fetchEventData(Number(params?.id));
@@ -141,43 +148,51 @@ export default function EventDetails({ params }: { params: { id: number } }) {
           setIsFetchingEventDetails(false);
         }
       } catch (error: any) {
-        console.log("FAILD TO FETCH EVENT:", error);
+        console.log("FAILED TO FETCH EVENT:", error);
       }
-    };
-
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    })();
   }, [credentials?.address, params?.id]);
 
   useEffect(() => {
-    const listenForEvent = async () => {
+    (async () => {
       const contract = await getBlumaContracts();
 
+      // TicketPurchased event listener
       contract.on(
         "TicketPurchased",
         async (buyer, _eventId, numberOfTickets) => {
-          console.log("PURCHASED TICKET", { buyer, _eventId, numberOfTickets });
-          await fetchEventData(Number(params?.id));
+          await fetchEventData(Number(_eventId));
         }
       );
-      contract.on("RegistrationClose", async (_currentTime, _status) => {
-        console.log("REGISTRATION CLOSED", { _currentTime, _status });
-        await fetchEventData(Number(params?.id));
+
+      // RefundIssued event listener
+      contract.on(
+        "RefundIssued",
+        async (buyer, _ticketId, _eventId, amount) => {
+          await fetchEventData(Number(_eventId));
+        }
+      );
+
+      // GroupCreated event listener
+      contract.on("GroupCreated", async (_roomId, imageUrl, _title) => {
+        await fetchEventData(Number(_roomId));
       });
-      contract.on("EventClosed", async (_eventId, _currentTime) => {
-        console.log("EVENT CLOSED", { _eventId, _currentTime });
-        await fetchEventData(Number(params?.id));
-      });
+
+      // GroupJoinedSuccessfully event listener
+      contract.on(
+        "GroupJoinedSuccessfully",
+        async (_sender, _eventId, _joinedTimw) => {
+          await fetchEventData(Number(_eventId));
+        }
+      );
 
       return () => {
         contract.removeAllListeners("TicketPurchased");
-        contract.removeAllListeners("RegistrationClose");
-        contract.removeAllListeners("EventClosed");
+        contract.removeAllListeners("RefundIssued");
+        contract.removeAllListeners("GroupCreated");
+        contract.removeAllListeners("GroupJoinedSuccessfully");
       };
-    };
-
-    listenForEvent();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    })();
   }, []);
 
   const purchaseTicketProps: any = {
@@ -189,6 +204,10 @@ export default function EventDetails({ params }: { params: { id: number } }) {
     seats: event?.seats,
     capacity: event?.capacity,
     eventType: event?.eventType,
+    purchaserEmail: credentials?.email,
+    creatorEmail: event?.owner?.email,
+    title: event?.title,
+    location: event?.location,
   };
 
   const joinGroupProps: any = {
@@ -205,7 +224,8 @@ export default function EventDetails({ params }: { params: { id: number } }) {
           <Image
             src={`https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${event?.imageUrl}`}
             alt="banner"
-            fill
+            width={350}
+            height={350}
             priority
             className="rounded-[inherit] size-full pointer-events-none"
           />
@@ -219,26 +239,20 @@ export default function EventDetails({ params }: { params: { id: number } }) {
               </p>
 
               <Link
-                href={`/profile/${eventOwner?.address}`}
+                href={`/profile/${event?.owner?.address}`}
                 className="text-sm flex items-center gap-2 w-max group">
                 <span className="size-5 bg-secondary rounded-full border relative">
                   <Image
-                    alt={eventOwner?.address as string}
-                    src={
-                      eventOwner?.avatar
-                        ? `https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${eventOwner?.avatar}`
-                        : "/assets/logo.png"
-                    }
+                    alt={event?.owner?.address as string}
+                    src={`https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${event?.owner?.avatar}`}
                     width={20}
                     height={20}
                     priority
-                    className={`size-full ${
-                      eventOwner?.avatar ? "rounded-full" : ""
-                    }`}
+                    className="size-full rounded-full"
                   />
                 </span>
                 <b className="group-hover:underline">
-                  {shortenAddress(eventOwner?.address as string)}
+                  {shortenAddress(event?.owner?.address as string)}
                 </b>
               </Link>
             </div>
@@ -248,7 +262,9 @@ export default function EventDetails({ params }: { params: { id: number } }) {
             <p className="text-muted-foreground text-sm font-medium mb-4 pb-2 border-b">
               {!ticketBuyers
                 ? "None signed up."
-                : `${ticketBuyers?.length} Going`}
+                : `${ticketBuyers?.length} ${
+                    event?.eventStatus === "CLOSE" ? "Attended" : "Going"
+                  }`}
             </p>
 
             <div className="flex flex-col">
@@ -259,50 +275,58 @@ export default function EventDetails({ params }: { params: { id: number } }) {
                     key={member?.email}>
                     <Image
                       alt={member?.address as string}
-                      src={
-                        member?.avatar
-                          ? `https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${member?.avatar}`
-                          : "/assets/logo.png"
-                      }
+                      src={`https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${member?.avatar}`}
                       width={32}
                       height={32}
                       priority
-                      className={`size-full ${
-                        member?.avatar ? "rounded-full" : ""
-                      }`}
+                      className="size-full rounded-full"
                     />
                   </span>
                 ))}
               </div>
 
-              {ticketBuyers && ticketBuyers?.length === 1 ? (
+              {ticketBuyers && ticketBuyers.length > 0 ? (
                 <p className="text-sm font-medium">
-                  <Link href={`/profile/${ticketBuyers[0]?.address}`}>
-                    {shortenAddress(ticketBuyers[0]?.address)}
-                  </Link>{" "}
-                  only.
-                </p>
-              ) : ticketBuyers && ticketBuyers?.length === 2 ? (
-                <p className="text-sm font-medium">
-                  <Link href={`/profile/${ticketBuyers[0]?.address}`}>
-                    {shortenAddress(ticketBuyers[0]?.address)}
-                  </Link>
-                  , and{" "}
-                  <Link href={`/profile/${ticketBuyers[1]?.address}`}>
-                    {shortenAddress(ticketBuyers[1]?.address)}
-                  </Link>{" "}
-                  only.
-                </p>
-              ) : ticketBuyers && ticketBuyers?.length >= 3 ? (
-                <p className="text-sm font-medium">
-                  <Link href={`/profile/${ticketBuyers[0]?.address}`}>
-                    {shortenAddress(ticketBuyers[0]?.address)}
-                  </Link>
-                  , and{" "}
-                  <Link href={`/profile/${ticketBuyers[1]?.address}`}>
-                    {shortenAddress(ticketBuyers[1]?.address)}
-                  </Link>{" "}
-                  and {ticketBuyers?.length - 2} others.
+                  {ticketBuyers.length === 1 ? (
+                    <>
+                      <Link
+                        href={`/profile/${ticketBuyers[0]?.address}`}
+                        className="font-semibold">
+                        {shortenAddress(ticketBuyers[0]?.address)}
+                      </Link>{" "}
+                      only.
+                    </>
+                  ) : ticketBuyers.length === 2 ? (
+                    <>
+                      <Link
+                        href={`/profile/${ticketBuyers[0]?.address}`}
+                        className="font-semibold">
+                        {shortenAddress(ticketBuyers[0]?.address)}
+                      </Link>{" "}
+                      and{" "}
+                      <Link
+                        href={`/profile/${ticketBuyers[1]?.address}`}
+                        className="font-semibold">
+                        {shortenAddress(ticketBuyers[1]?.address)}
+                      </Link>{" "}
+                      only.
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href={`/profile/${ticketBuyers[0]?.address}`}
+                        className="font-semibold">
+                        {shortenAddress(ticketBuyers[0]?.address)}
+                      </Link>{" "}
+                      and{" "}
+                      <Link
+                        href={`/profile/${ticketBuyers[1]?.address}`}
+                        className="font-semibold">
+                        {shortenAddress(ticketBuyers[1]?.address)}
+                      </Link>{" "}
+                      and {ticketBuyers.length - 2} others.
+                    </>
+                  )}
                 </p>
               ) : (
                 <p className="text-sm font-medium">No one has registered.</p>
@@ -310,104 +334,15 @@ export default function EventDetails({ params }: { params: { id: number } }) {
             </div>
           </div>
 
-          {!isAdmin ? (
+          {isAdmin && !event?.nftUrl && event?.eventStatus !== "CLOSE" && (
             <div className="flex flex-col w-full">
               <p className="text-muted-foreground text-sm font-medium mb-4 pb-2 border-b">
-                Stay up to date
+                Mint NFT to participants
               </p>
 
-              <div className="flex flex-col gap-2">
-                {!hasBoughtTicket && (
-                  <p className="text-sm font-medium">
-                    Registration starts on{" "}
-                    <b>{moment(event?.regStartsTime).format("MMMM Do")}</b> to{" "}
-                    <b>{moment(event?.regEndsTime).format("MMMM Do")}</b>
-                  </p>
-                )}
-
-                {/* {event?.regStartsTime > new Date() ? (
-                  <>
-                    <p className="text-sm font-medium">
-                      Keep track of the latest information and updates on the
-                      event: <b>{event?.title}</b>
-                    </p>
-                    <div className="flex items-center gap-2">
-                      {!hasBoughtTicket ? (
-                        <BuyTicketPopup {...purchaseTicketProps} />
-                      ) : hasJoinedGroup ? (
-                        <>
-                          <Button variant="secondary" className="w-full">
-                            Refund
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            className="w-full"
-                            asChild>
-                            <Link
-                              className="flex items-center"
-                              href={`/rooms/${Number(event?.eventId)}`}>
-                              <PiWechatLogoDuotone size={16} className="mr-2" />
-                              Go to Room
-                            </Link>
-                          </Button>
-                        </>
-                      ) : (
-                        <JoinGroupPopup {...joinGroupProps} />
-                      )}
-                    </div>
-                  </>
-                ) : event?.regEndsTime < new Date() ? (
-                  <p className="text-sm font-medium">
-                    Registration has not started yet
-                  </p>
-                ) : (
-                  <p className="text-sm font-medium">Registration has closed</p>
-                )} */}
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col w-full">
-              <p className="text-muted-foreground text-sm font-medium mb-4 pb-2 border-b">
-                See what others are saying
-              </p>
-
-              <div className="flex flex-col gap-2">
-                <Button variant="secondary" className="w-full" asChild>
-                  <Link
-                    className="flex items-center"
-                    href={`/rooms/${Number(event?.eventId)}`}>
-                    <PiWechatLogoDuotone size={16} className="mr-2" />
-                    Go to Room
-                  </Link>
-                </Button>
-              </div>
+              <MintingNFTPopup eventId={event?.eventId!} />
             </div>
           )}
-
-          <div>
-            <h2>Registration Status:</h2>
-            {event && event?.regStatus === EnStatus.PENDING && (
-              <p>Registration is pending.</p>
-            )}
-            {event && event?.regStatus === EnStatus.OPEN && (
-              <p>Registration is ongoing.</p>
-            )}
-            {event && event?.regStatus === EnStatus.CLOSE && (
-              <p>Registration has ended.</p>
-            )}
-          </div>
-          <div>
-            <h2>Event Status:</h2>
-            {event && event?.eventStatus === EnStatus.PENDING && (
-              <p>Event is pending.</p>
-            )}
-            {event && event?.eventStatus === EnStatus.OPEN && (
-              <p>Event is ongoing.</p>
-            )}
-            {event && event?.eventStatus === EnStatus.CLOSE && (
-              <p>Event has ended.</p>
-            )}
-          </div>
         </div>
       </div>
 
@@ -445,17 +380,17 @@ export default function EventDetails({ params }: { params: { id: number } }) {
             <div className="size-10 border flex items-center justify-center rounded-lg text-foreground/50">
               {locationType === "google" ? (
                 <SiGooglemeet
-                  size={22}
+                  size={20}
                   className="text-sm text-muted-foreground min-w-[18px]"
                 />
               ) : locationType === "youtube" ? (
-                <TbBrandYoutubeFilled size={22} />
+                <TbBrandYoutubeFilled size={20} />
               ) : locationType === "bitly" ? (
-                <SiBitly size={22} />
+                <SiBitly size={20} />
               ) : locationType === "https://" || locationType === "http://" ? (
-                <HiStatusOnline size={22} />
+                <HiStatusOnline size={20} />
               ) : (
-                locationType === "offline" && <Locate size={22} />
+                locationType === "offline" && <Locate size={20} />
               )}
             </div>
 
@@ -474,33 +409,413 @@ export default function EventDetails({ params }: { params: { id: number } }) {
           </div>
         </div>
 
-        {/* //TODO: IF USER HAS PURCHASED TICKET */}
-        {event && event?.eventStatus === EnStatus.CLOSE && (
-          <div className="p-3 sm:p-4 border rounded-lg sm:rounded-xl border-initial bg-initial/10 text-initial flex items-start">
-            <Info size={20} className="mr-3 mt-1" />
-            {hasBoughtTicket && !isAdmin ? (
-              <div>
-                <div className="size-10 bg-secondary rounded-full mb-2"></div>
-                <h1 className="text-base md:text-lg font-semibold">
-                  We Appreciate Your Participation
+        <div className="rounded-xl bg-secondary/50 flex-1">
+          {isAdmin && event?.eventStatus !== "CLOSE" ? (
+            <div className="p-3 sm:p-4 flex flex-col gap-1">
+              <p className="text-xs md:text-sm font-medium mb-2">
+                {event &&
+                  (!event.room?.title &&
+                  !event.room?.description &&
+                  !event.room?.imageUrl
+                    ? "Create a room"
+                    : event.room.members.length === 1
+                    ? "No one has joined your group"
+                    : event.room.members.length === 2
+                    ? "There's someone in your group, say hello!"
+                    : `You have ${
+                        event.room.members.length - 1
+                      } members in your group`)}
+              </p>
+
+              {!event?.room?.title &&
+              !event?.room?.description &&
+              !event?.room?.imageUrl ? (
+                <CreateGroupPopup eventId={event?.eventId!} />
+              ) : (
+                <Button className="rounded-md" variant="secondary" asChild>
+                  <Link
+                    href={`/rooms/${event?.room?.eventId}`}
+                    className="flex items-center">
+                    <PiWechatLogoDuotone className="mr-2" size={15} />
+                    Go to Room
+                  </Link>
+                </Button>
+              )}
+            </div>
+          ) : (
+            isAdmin &&
+            event?.eventStatus === "CLOSE" && (
+              <div className="p-3 sm:p-4 flex flex-col gap-1">
+                <div className="rounded-full size-10 bg-secondary mb-1">
+                  <Image
+                    alt={credentials?.address as string}
+                    src={`https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${credentials?.avatar}`}
+                    width={40}
+                    height={40}
+                    priority
+                    className="size-full rounded-[inherit]"
+                  />
+                </div>
+
+                <h1 className="text-base md:text-lg lg:text-xl font-bold">
+                  Event has ended
                 </h1>
-                <p className="text-xs md:text-sm">
-                  Hope the event was enjoyable for you!
+
+                <p className="text-xs md:text-sm font-medium">
+                  Withdraw money earned from event
+                </p>
+
+                {event?.room?.members.length > 1 && (
+                  <WithdrawFundsPopup eventId={event?.eventId} />
+                )}
+              </div>
+            )
+          )}
+
+          {!isAdmin && event?.eventStatus !== "CLOSE" && !hasBoughtTicket ? (
+            <div className="flex flex-col p-1">
+              <div className="w-full py-2 px-3 bg-secondary rounded-t-lg">
+                <p className="text-xs font-medium opacity-50">Registration</p>
+              </div>
+
+              <div className="p-3 pb-2 flex flex-col gap-2">
+                <p className="text-sm font-semibold">
+                  Welcome! To join the event, please purchase a ticket below.
+                </p>
+
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="size-4 bg-secondary rounded-full relative">
+                    <Image
+                      alt={credentials?.address as string}
+                      src={`https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${credentials?.avatar}`}
+                      width={32}
+                      height={32}
+                      priority
+                      className="size-full rounded-[inherit]"
+                    />
+                  </span>
+
+                  <Link
+                    href={`/profile/${credentials?.address}`}
+                    className="text-sm font-medium">
+                    {credentials?.email}
+                  </Link>
+                </div>
+
+                {event?.regStatus === "PENDING" ? (
+                  <p className="text-xs md:text-sm font-medium text-muted-foreground italic">
+                    Coming soon
+                  </p>
+                ) : event?.regStatus === "OPEN" ? (
+                  <BuyTicketPopup {...purchaseTicketProps}>
+                    <Button variant="secondary" className="w-full rounded-md">
+                      <MdPayments size={16} className="mr-2" />
+                      {event?.eventType === "FREE"
+                        ? "Get Ticket"
+                        : "Buy Ticket"}
+                    </Button>
+                  </BuyTicketPopup>
+                ) : (
+                  <p className="text-xs md:text-sm font-medium text-muted-foreground italic">
+                    Closed
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : !isAdmin && event?.eventStatus !== "CLOSE" && hasBoughtTicket ? (
+            <div className="p-3 sm:p-4 flex flex-col gap-1">
+              <div className="rounded-full size-10 bg-secondary mb-1">
+                <Image
+                  alt={credentials?.address as string}
+                  src={`https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${credentials?.avatar}`}
+                  width={40}
+                  height={40}
+                  priority
+                  className="size-full rounded-[inherit]"
+                />
+              </div>
+
+              <h1 className="text-base md:text-lg lg:text-xl font-bold">
+                You&apos; In
+              </h1>
+
+              <p className="text-xs md:text-sm font-medium">
+                An email has been sent to <b>{credentials?.email}</b>
+              </p>
+
+              <div className="w-full py-2 px-3 rounded-lg bg-secondary flex items-start my-2">
+                <Clock size={18} className="mr-3 mt-0.5 hidden sm:flex" />
+
+                <div className="flex flex-col flex-1">
+                  <p className="flex items-end justify-between w-full border-b border-b-secondary-foreground/20 pb-2 mb-2">
+                    <span className="text-sm font-medium">Event starts in</span>
+                    <span className="text-sm font-medium text-initial">
+                      3h 51m
+                    </span>
+                  </p>
+                  <p className="text-xs font-normal">
+                    The join button will be shown when the event is about to
+                    start.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                {event &&
+                !event.room?.title &&
+                !event.room?.description &&
+                !event.room?.imageUrl ? (
+                  ""
+                ) : hasJoinedGroup ? (
+                  <Button
+                    className="rounded-md w-max"
+                    variant="secondary"
+                    size="sm"
+                    asChild>
+                    <Link
+                      href={`/rooms/${event?.room?.eventId}`}
+                      className="flex items-center">
+                      <PiWechatLogoDuotone className="mr-2" size={15} />
+                      Go to Room
+                    </Link>
+                  </Button>
+                ) : (
+                  <JoinGroupPopup {...joinGroupProps}>
+                    <Button
+                      className="rounded-md w-max"
+                      variant="secondary"
+                      size="sm">
+                      <PiWechatLogoDuotone className="mr-2" size={15} />
+                      Join Room
+                    </Button>
+                  </JoinGroupPopup>
+                )}
+
+                <Button
+                  className="rounded-md w-max"
+                  variant="secondary"
+                  size="sm">
+                  <RiShareForward2Fill className="mr-2" size={15} />
+                  Invite a friend
+                </Button>
+              </div>
+              <CancelRegistration eventId={event?.eventId!} />
+            </div>
+          ) : (
+            !isAdmin &&
+            event?.eventStatus === "CLOSE" &&
+            hasBoughtTicket && (
+              <div className="p-3 sm:p-4 flex flex-col gap-1">
+                <div className="rounded-full size-10 bg-secondary mb-1">
+                  <Image
+                    alt={credentials?.address as string}
+                    src={`https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${credentials?.avatar}`}
+                    width={40}
+                    height={40}
+                    priority
+                    className="size-full rounded-[inherit]"
+                  />
+                </div>
+
+                <h1 className="text-base md:text-lg lg:text-xl font-bold">
+                  Thank You for Joining
+                </h1>
+
+                <p className="text-xs md:text-sm font-medium">
+                  We hope you enjoyed the event!
                 </p>
               </div>
-            ) : (
-              <div>
-                <h1 className="text-base md:text-lg font-semibold">
-                  This event has concluded.
-                </h1>
-                <p className="text-xs md:text-sm">
-                  NFTs were handed to the attendees as a token of appreciation.
-                </p>
+            )
+          )}
+
+          {/* {event?.eventStatus === "CLOSE" && hasBoughtTicket && !isAdmin ? (
+            <div className="p-3 sm:p-4 flex flex-col gap-1">
+              <div className="rounded-full size-10 bg-secondary mb-1">
+                <Image
+                  alt={credentials?.address as string}
+                  src={`https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${credentials?.avatar}`}
+                  width={40}
+                  height={40}
+                  priority
+                  className="size-full rounded-[inherit]"
+                />
               </div>
-            )}
-          </div>
-        )}
-        {/* //TODO: IF USER HAS PURCHASED TICKET */}
+
+              <h1 className="text-base md:text-lg lg:text-xl font-bold">
+                Thank You for Joining
+              </h1>
+
+              <p className="text-xs md:text-sm font-medium">
+                We hope you enjoyed the event!
+              </p>
+            </div>
+          ) : hasBoughtTicket && event?.eventStatus !== "CLOSE" && !isAdmin ? (
+            <div className="p-3 sm:p-4 flex flex-col gap-1">
+              <div className="rounded-full size-10 bg-secondary mb-1">
+                <Image
+                  alt={credentials?.address as string}
+                  src={`https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${credentials?.avatar}`}
+                  width={40}
+                  height={40}
+                  priority
+                  className="size-full rounded-[inherit]"
+                />
+              </div>
+
+              <h1 className="text-base md:text-lg lg:text-xl font-bold">
+                You&apos; In
+              </h1>
+
+              <p className="text-xs md:text-sm font-medium">
+                An email has been sent to <b>{credentials?.email}</b>
+              </p>
+
+              <div className="w-full py-2 px-3 rounded-lg bg-secondary flex items-start my-2">
+                <Clock size={18} className="mr-3 mt-0.5 hidden sm:flex" />
+
+                <div className="flex flex-col flex-1">
+                  <p className="flex items-end justify-between w-full border-b border-b-secondary-foreground/20 pb-2 mb-2">
+                    <span className="text-sm font-medium">Event starts in</span>
+                    <span className="text-sm font-medium text-initial">
+                      3h 51m
+                    </span>
+                  </p>
+                  <p className="text-xs font-normal">
+                    The join button will be shown when the event is about to
+                    start.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                {event &&
+                !event.room?.title &&
+                !event.room?.description &&
+                !event.room?.imageUrl ? (
+                  ""
+                ) : hasJoinedGroup ? (
+                  <Button
+                    className="rounded-md w-max"
+                    variant="secondary"
+                    size="sm"
+                    asChild>
+                    <Link
+                      href={`/rooms/${event?.room?.eventId}`}
+                      className="flex items-center">
+                      <PiWechatLogoDuotone className="mr-2" size={15} />
+                      Go to Room
+                    </Link>
+                  </Button>
+                ) : (
+                  <JoinGroupPopup {...joinGroupProps}>
+                    <Button
+                      className="rounded-md w-max"
+                      variant="secondary"
+                      size="sm">
+                      <PiWechatLogoDuotone className="mr-2" size={15} />
+                      Join Room
+                    </Button>
+                  </JoinGroupPopup>
+                )}
+
+                <Button
+                  className="rounded-md w-max"
+                  variant="secondary"
+                  size="sm">
+                  <RiShareForward2Fill className="mr-2" size={15} />
+                  Invite a friend
+                </Button>
+              </div>
+              <CancelRegistration />
+            </div>
+          ) : (
+            !isAdmin &&
+            event?.eventStatus !== "CLOSE" && (
+              <div className="flex flex-col p-1">
+                <div className="w-full py-2 px-3 bg-secondary rounded-t-lg">
+                  <p className="text-xs font-medium opacity-50">Registration</p>
+                </div>
+
+                <div className="p-3 pb-2 flex flex-col gap-2">
+                  <p className="text-sm font-semibold">
+                    Welcome! To join the event, please purchase a ticket below.
+                  </p>
+
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="size-4 bg-secondary rounded-full relative">
+                      <Image
+                        alt={credentials?.address as string}
+                        src={`https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${credentials?.avatar}`}
+                        width={32}
+                        height={32}
+                        priority
+                        className="size-full rounded-[inherit]"
+                      />
+                    </span>
+
+                    <Link
+                      href={`/profile/${credentials?.address}`}
+                      className="text-sm font-medium">
+                      {credentials?.email}
+                    </Link>
+                  </div>
+
+                  {event?.regStatus === "PENDING" ? (
+                    <p className="text-xs md:text-sm font-medium text-muted-foreground italic">
+                      Coming soon
+                    </p>
+                  ) : event?.regStatus === "OPEN" ? (
+                    <BuyTicketPopup {...purchaseTicketProps}>
+                      <Button variant="secondary" className="w-full rounded-md">
+                        <MdPayments size={16} className="mr-2" />
+                        {event?.eventType === "FREE"
+                          ? "Get Ticket"
+                          : "Buy Ticket"}
+                      </Button>
+                    </BuyTicketPopup>
+                  ) : (
+                    <p className="text-xs md:text-sm font-medium text-muted-foreground italic">
+                      Closed
+                    </p>
+                  )}
+                </div>
+              </div>
+            )
+          )} */}
+
+          {/* //! has canceled registration */}
+          {/* <div className="p-3 sm:p-4 flex flex-col gap-1">
+            <div className="rounded-full size-10 bg-secondary mb-1">
+              <Image
+                alt={credentials?.address as string}
+                src={`https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${credentials?.avatar}`}
+                width={40}
+                height={40}
+                priority
+                className="size-full rounded-[inherit]"
+              />
+            </div>
+
+            <h1 className="text-base md:text-lg lg:text-xl font-bold">
+              You&apos;re Not Going
+            </h1>
+
+            <p className="text-xs md:text-sm font-medium">
+              We hope to see you next time
+            </p>
+
+            <BuyTicketPopup {...purchaseTicketProps}>
+              <p className="text-xs font-normal mt-4">
+                Changed your mind? You can{" "}
+                <b className="text-initial underline cursor-pointer">
+                  register again
+                </b>
+                .
+              </p>
+            </BuyTicketPopup>
+          </div> */}
+          {/* //! has canceled registration */}
+        </div>
 
         <div className="flex flex-col w-full">
           <p className="text-muted-foreground text-sm font-medium mb-4 pb-2 border-b">
@@ -526,346 +841,165 @@ export default function EventDetails({ params }: { params: { id: number } }) {
             {event?.description}
           </ReactMarkdown>
         </div>
-
-        <div className="flex sm:hidden flex-col gap-6">
-          {!isAdmin && (
-            <div className="flex flex-col w-full">
-              <p className="text-muted-foreground text-sm font-medium mb-4 pb-2 border-b">
-                Hosted By
-              </p>
-
-              <Link
-                href={`/profile/${eventOwner?.address}`}
-                className="text-sm flex items-center gap-2 w-max group">
-                <span className="size-5 bg-secondary rounded-full border relative">
-                  <Image
-                    alt={eventOwner?.address as string}
-                    src={
-                      eventOwner?.avatar
-                        ? `https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${eventOwner?.avatar}`
-                        : "/assets/logo.png"
-                    }
-                    width={20}
-                    height={20}
-                    priority
-                    className={`size-full ${
-                      eventOwner?.avatar ? "rounded-full" : ""
-                    }`}
-                  />
-                </span>
-                <b className="group-hover:underline">
-                  {shortenAddress(eventOwner?.address as string)}
-                </b>
-              </Link>
-            </div>
-          )}
-
-          <div className="flex flex-col w-full">
-            <p className="text-muted-foreground text-sm font-medium mb-4 pb-2 border-b">
-              {!ticketBuyers
-                ? "None signed up."
-                : `${ticketBuyers?.length} Going`}
-            </p>
-
-            <div className="flex flex-col">
-              <div className="flex items-center">
-                {ticketBuyers?.slice(0, 6)?.map((member) => (
-                  <span
-                    className="size-8 bg-secondary rounded-full relative border-4 border-background first:-ml-1 -ml-3"
-                    key={member?.email}>
-                    <Image
-                      alt={member?.address as string}
-                      src={
-                        member?.avatar
-                          ? `https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${member?.avatar}`
-                          : "/assets/logo.png"
-                      }
-                      width={32}
-                      height={32}
-                      priority
-                      className={`size-full ${
-                        member?.avatar ? "rounded-full" : ""
-                      }`}
-                    />
-                  </span>
-                ))}
-              </div>
-
-              {ticketBuyers && ticketBuyers?.length === 1 ? (
-                <p className="text-sm font-medium">
-                  <Link href={`/profile/${ticketBuyers[0]?.address}`}>
-                    {shortenAddress(ticketBuyers[0]?.address)}
-                  </Link>{" "}
-                  only.
-                </p>
-              ) : ticketBuyers && ticketBuyers?.length === 2 ? (
-                <p className="text-sm font-medium">
-                  <Link href={`/profile/${ticketBuyers[0]?.address}`}>
-                    {shortenAddress(ticketBuyers[0]?.address)}
-                  </Link>
-                  , and{" "}
-                  <Link href={`/profile/${ticketBuyers[1]?.address}`}>
-                    {shortenAddress(ticketBuyers[1]?.address)}
-                  </Link>{" "}
-                  only.
-                </p>
-              ) : ticketBuyers && ticketBuyers?.length >= 3 ? (
-                <p className="text-sm font-medium">
-                  <Link href={`/profile/${ticketBuyers[0]?.address}`}>
-                    {shortenAddress(ticketBuyers[0]?.address)}
-                  </Link>
-                  , and{" "}
-                  <Link href={`/profile/${ticketBuyers[1]?.address}`}>
-                    {shortenAddress(ticketBuyers[1]?.address)}
-                  </Link>{" "}
-                  and {ticketBuyers?.length - 2} others.
-                </p>
-              ) : (
-                <p className="text-sm font-medium">No one has registered.</p>
-              )}
-            </div>
-          </div>
-
-          {!isAdmin ? (
-            <div className="flex flex-col w-full">
-              <p className="text-muted-foreground text-sm font-medium mb-4 pb-2 border-b">
-                Stay up to date
-              </p>
-
-              <div className="flex flex-col gap-2">
-                {!hasBoughtTicket && (
-                  <p className="text-sm font-medium">
-                    Registration starts on{" "}
-                    <b>{moment(event?.regStartsTime).format("MMMM Do")}</b> to{" "}
-                    <b>{moment(event?.regEndsTime).format("MMMM Do")}</b>
-                  </p>
-                )}
-
-                {event?.regStatus === "OPEN" ? (
-                  <>
-                    <p className="text-sm font-medium">
-                      Keep track of the latest information and updates on the
-                      event: <b>{event?.title}</b>
-                    </p>
-                    <div className="flex items-center gap-2">
-                      {!hasBoughtTicket ? (
-                        <BuyTicketPopup {...purchaseTicketProps} />
-                      ) : hasJoinedGroup ? (
-                        <>
-                          <Button variant="secondary" className="w-full">
-                            Refund
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            className="w-full"
-                            asChild>
-                            <Link
-                              className="flex items-center"
-                              href={`/rooms/${Number(event?.eventId)}`}>
-                              <PiWechatLogoDuotone size={16} className="mr-2" />
-                              Go to Room
-                            </Link>
-                          </Button>
-                        </>
-                      ) : (
-                        <JoinGroupPopup {...joinGroupProps} />
-                      )}
-                    </div>
-                  </>
-                ) : event?.regStatus === "PENDING" ? (
-                  <p className="text-sm font-medium">
-                    Registration has not started yet
-                  </p>
-                ) : (
-                  <p className="text-sm font-medium">Registration has closed</p>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col w-full">
-              <p className="text-muted-foreground text-sm font-medium mb-4 pb-2 border-b">
-                See what others are saying
-              </p>
-
-              <div className="flex flex-col gap-2">
-                <Button variant="secondary" className="w-full" asChild>
-                  <Link
-                    className="flex items-center"
-                    href={`/rooms/${Number(event?.eventId)}`}>
-                    <PiWechatLogoDuotone size={16} className="mr-2" />
-                    Go to Room
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
 }
 
-const BuyTicketPopup = ({
-  eventId,
-  isPurchasing,
-  setIsPurchasing,
-  numTicket,
-  setNumTicket,
-  seats,
-  capacity,
-  eventType,
-}: {
-  eventId: number;
-  setIsPurchasing: any;
-  isPurchasing: boolean;
-  numTicket: number;
-  setNumTicket: any;
-  seats: number;
-  capacity: number;
-  eventType: string;
-}) => {
-  async function handleSubmit(e: any) {
-    e.preventDefault();
-    if (!numTicket) {
-      toast.info("Please provide the number of tickets.");
-      return;
-    } else if (numTicket < 1) {
-      toast.info("You need to purchase at least 1 ticket");
-      return;
-    } else if (numTicket > 10) {
-      toast.info("You can only purchase at most 10 tickets");
-      return;
-    } else if (Number(numTicket) + Number(seats) > Number(capacity)) {
-      toast.info("Not enough seats available");
-      return;
-    }
+const WithdrawFundsPopup = ({ eventId }: { eventId: number }) => {
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
 
-    // _event.seats + _numberOfTickets > _event.capacity;
-
-    setIsPurchasing(true);
+  const handleWithdrawFee = async () => {
+    setIsWithdrawing(true);
     try {
-      const someonePurchaseTicket = await purchaseTicket(
-        Number(eventId),
-        Number(numTicket)
-      );
-
-      if (someonePurchaseTicket) {
-        console.log(someonePurchaseTicket);
-        toast.success("You now have a space in this event.");
-        setIsPurchasing(false);
-      }
-    } catch (error: any) {
-      console.log("FAILED TO PURCHASE TICKET:", error);
-      setIsPurchasing(false);
+      const result = await withdrawEventFee(eventId);
+      if (result) toast.success("Withdrawal successful");
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsWithdrawing(false);
     }
-  }
+  };
 
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild disabled={isPurchasing} className="w-1/2">
-        <Button variant="default" className="w-full">
-          {isPurchasing ? (
-            <>
-              <Loader size={16} className="animate-spin mr-2" /> Please wait...
-            </>
-          ) : (
-            <>
-              <MdPayments size={16} className="mr-2" />
-              {eventType === "FREE" ? "Get Ticket" : "Buy Ticket"}
-            </>
-          )}
+      <AlertDialogTrigger asChild>
+        <Button variant="secondary" className="w-full rounded-md mt-2">
+          <Coins size={16} className="mr-2" />
+          Withdraw
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent className="max-w-[360px] w-full border rounded-[20px] backdrop-blur-3xl bg-secondary/60 flex flex-col gap-4">
         <div className="w-full">
           <div className="rounded-full size-16 bg-secondary/80 flex items-center justify-center border">
-            <MdPayments size={36} className="text-muted-foreground" />
+            <Coins size={36} className="text-muted-foreground" />
           </div>
         </div>
 
-        <h1 className="text-lg md:text-[22px] font-bold">Purchase Ticket</h1>
+        <h1 className="text-lg md:text-[22px] font-bold">
+          Withdraw Event Fees
+        </h1>
         <p className="text-xs md:text-sm text-muted-foreground -mt-2">
-          {eventType === "FREE"
-            ? "You will not be charged for the ticket, only"
-            : "You will be charged for the ticket"}
+          We&apos;ll let the host know that you can&apos;t make it.
         </p>
 
-        <form onSubmit={handleSubmit} className="w-full flex flex-col gap-2">
-          <div className="flex flex-col gap-1">
-            <Label>Number of Tickets</Label>
-
-            <Input
-              onChange={(e: any) => setNumTicket(e.target.value)}
-              placeholder="3 Tickets"
-              className="h-10"
-              type="number"
-              minLength={1}
-              maxLength={10}
-              disabled={isPurchasing}
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button
-              disabled={isPurchasing}
-              onClick={handleSubmit}
-              type="submit"
-              className="w-1/2">
-              {isPurchasing ? (
-                <Loader size={16} className="animate-spin" />
-              ) : eventType === "FREE" ? (
-                "Get Ticket"
-              ) : (
-                "Buy Ticket"
-              )}
-            </Button>
-            <AlertDialogCancel className="w-1/2" disabled={isPurchasing}>
-              Cancel
-            </AlertDialogCancel>
-          </div>
-        </form>
+        <Button disabled={isWithdrawing} onClick={handleWithdrawFee}>
+          {isWithdrawing ? (
+            <>
+              <Loader size={16} className="mr-2 animate-spin" />
+              Withdrawing...
+            </>
+          ) : (
+            "Confirm"
+          )}
+        </Button>
+        <AlertDialogCancel className="absolute top-2 right-2 p-0 bg-transparent hover:bg-transparent border-0 size-9 rounded-full">
+          <X size={16} />
+        </AlertDialogCancel>
       </AlertDialogContent>
     </AlertDialog>
   );
 };
 
-const JoinGroupPopup = ({
-  title,
-  eventId,
-}: {
-  title: string;
-  eventId: number;
-}) => {
-  const router = useRouter();
-  const [isJoining, setIsJoining] = useState(false);
+const CancelRegistration = ({ eventId }: { eventId: number }) => {
+  const [isCanceling, setIsCanceling] = useState(false);
 
-  const handleJoiningGroup = async () => {
-    setIsJoining(true);
+  const handleCancelation = async () => {
+    setIsCanceling(true);
     try {
-      const joined = await joinGroup(Number(eventId));
-      if (joined) {
-        toast.success("Successfully joined group");
-        router.push(`/rooms/${Number(eventId)}`);
-        return;
-      } else {
-        toast.error("Something went wrong");
+      const data = await refundFee(Number(eventId));
+      if (data) {
+        toast.success("Registration canceled");
       }
-    } catch (error: any) {
-      console.log("FAILD TO JOIN GROUP:", error);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsCanceling(false);
     }
   };
+
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild className="w-1/2">
-        <Button variant="secondary" className="w-full">
-          {isJoining ? (
+      <AlertDialogTrigger asChild>
+        <p className="text-xs font-normal">
+          No longer able to attend? Notify the host by{" "}
+          <b className="text-initial underline cursor-pointer">
+            canceling your registration
+          </b>
+          .
+        </p>
+      </AlertDialogTrigger>
+      <AlertDialogContent className="max-w-[360px] w-full border rounded-[20px] backdrop-blur-3xl bg-secondary/60 flex flex-col gap-4">
+        <div className="w-full">
+          <div className="rounded-full size-16 bg-secondary/80 flex items-center justify-center border">
+            <PiWechatLogoDuotone size={36} className="text-muted-foreground" />
+          </div>
+        </div>
+
+        <h1 className="text-lg md:text-[22px] font-bold">
+          Cancel Registration
+        </h1>
+        <p className="text-xs md:text-sm text-muted-foreground -mt-2">
+          We&apos;ll let the host know that you can&apos;t make it.
+        </p>
+
+        <Button
+          disabled={isCanceling}
+          onClick={handleCancelation}
+          variant="destructive">
+          {isCanceling ? (
             <>
-              <Loader size={16} className="animate-spin mr-2" /> Joining...
+              <Loader size={16} className="mr-2 animate-spin" />
+              Refunding...
+            </>
+          ) : (
+            "Confirm"
+          )}
+        </Button>
+        <AlertDialogCancel className="absolute top-2 right-2 p-0 bg-transparent hover:bg-transparent border-0 size-9 rounded-full">
+          <X size={16} />
+        </AlertDialogCancel>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+};
+
+const CreateGroupPopup = ({ eventId }: { eventId: number }) => {
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+
+  const handleCreateGroup = async () => {
+    if (!eventId) return;
+    setIsCreatingGroup(true);
+
+    try {
+      const result = await createSpace(Number(eventId));
+      if (result) {
+        toast.success("Room has been created! 🎉");
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error("Error setting up space!");
+    } finally {
+      setIsCreatingGroup(false);
+    }
+  };
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="secondary"
+          className="flex-1"
+          disabled={isCreatingGroup}>
+          {isCreatingGroup ? (
+            <>
+              <Loader size={16} className="mr-2 animate-spin" />
+              Please wait...
             </>
           ) : (
             <>
               <PiWechatLogoDuotone size={16} className="mr-2" />
-              Join Group
+              Create Group
             </>
           )}
         </Button>
@@ -877,30 +1011,370 @@ const JoinGroupPopup = ({
           </div>
         </div>
 
-        <h1 className="text-lg md:text-[22px] font-bold">Join Group Chat</h1>
+        <h1 className="text-lg md:text-[22px] font-bold">
+          Create Space (optional)
+        </h1>
         <p className="text-xs md:text-sm text-muted-foreground -mt-2">
-          Follow the Most Recent News and Updates on the <b>{title}</b> group
-          chat.
+          Remember that you may decide whether or not to set up a space for
+          attendees.
         </p>
 
-        <div className="flex items-center flex-col sm:flex-row sm:gap-3 w-full">
+        <Button onClick={handleCreateGroup} disabled={isCreatingGroup}>
+          {isCreatingGroup ? (
+            <>
+              <Loader size={16} className="mr-2 animate-spin" />
+              Setting up space...
+            </>
+          ) : (
+            "Create Group"
+          )}
+        </Button>
+        <AlertDialogCancel className="absolute top-2 right-2 p-0 bg-transparent hover:bg-transparent border-0 size-9 rounded-full">
+          <X size={16} />
+        </AlertDialogCancel>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+};
+
+const MintingNFTPopup = ({ eventId }: { eventId: number }) => {
+  const defaultNFT = "QmR2L6f8Z489SNoSP2rXeCEMv5V3Sf6TM4CZKEpjSMiQ4a";
+
+  const [eventNFT, setEventNFT] = useState<File>();
+  const [isMinting, setIsMinting] = useState<string | boolean>(MintingNFT.STOP);
+
+  const handleMintNFT = async () => {
+    let nft: string;
+
+    try {
+      if (eventNFT === undefined) {
+        nft = defaultNFT;
+      } else {
+        setIsMinting(MintingNFT.UPLOADING);
+        const cover = await uploadBannerToPinata(eventNFT);
+        nft = cover;
+        setIsMinting(MintingNFT.STOP);
+      }
+
+      if (!nft) {
+        return toast.error("Could not upload banner to IPFS.");
+      }
+
+      setIsMinting(MintingNFT.START);
+
+      const result = await mintNFT(
+        Number(eventId),
+        `https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${nft}`
+      );
+
+      if (result) {
+        toast.success("Minted successfully");
+      }
+    } catch (error: any) {
+      console.log(error);
+      toast.error("Error minting nft");
+    } finally {
+      setIsMinting(MintingNFT.STOP);
+    }
+  };
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="secondary" className="flex-1">
+          {isMinting === MintingNFT.UPLOADING ? (
+            <>
+              <Loader size={16} className="mr-2 animate-spin" />
+              Uploading...
+            </>
+          ) : isMinting === MintingNFT.START ? (
+            <>
+              <Loader size={16} className="mr-2 animate-spin" />
+              Minting...
+            </>
+          ) : (
+            <>
+              <RiNftLine size={16} className="mr-2" />
+              Mint NFT
+            </>
+          )}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent className="max-w-[360px] w-full border rounded-[20px] backdrop-blur-3xl bg-secondary/60 flex flex-col gap-4">
+        <div className="w-full">
+          <div className="rounded-full size-16 bg-secondary/80 flex items-center justify-center border">
+            <RiNftLine size={36} className="text-muted-foreground" />
+          </div>
+        </div>
+
+        <h1 className="text-lg md:text-[22px] font-bold">
+          Mint NFT (optional)
+        </h1>
+        <p className="text-xs md:text-sm text-muted-foreground -mt-2">
+          Keep in mind that you have the choice to mint the default NFT or to
+          mint your NFT for participants.
+        </p>
+
+        <>
+          <Input
+            hidden
+            className="hidden opacity-0"
+            type="file"
+            accept="image/*"
+            id="nft"
+            onChange={(e: any) => setEventNFT(e.target.files[0])}
+            disabled={isMinting !== MintingNFT.STOP}
+          />
+          <Label
+            htmlFor="nft"
+            className={cn(
+              "aspect-[1.4] border-dashed rounded-lg w-full bg-secondary p-1 cursor-pointer group",
+              {
+                "border-0 cursor-not-allowed opacity-50":
+                  isMinting !== MintingNFT.STOP,
+              }
+            )}>
+            <div className="relative size-full rounded-[inherit] overflow-hidden">
+              {isMinting === MintingNFT.STOP && (
+                <div className="size-full absolute top-0 left-0 select-none pointer-events-none opacity-0 group-hover:opacity-100 duration-300 flex items-center justify-center bg-background/50 backdrop-blur-xl z-10">
+                  <UploadIcon size={48} />
+                </div>
+              )}
+              <Image
+                src={
+                  eventNFT
+                    ? URL.createObjectURL(eventNFT)
+                    : `https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${defaultNFT}`
+                }
+                alt="event-nft"
+                fill
+                priority
+                className="size-full object-cover"
+              />
+            </div>
+          </Label>
+        </>
+
+        <Button onClick={handleMintNFT}>
+          {isMinting === MintingNFT.UPLOADING ? (
+            <>
+              <Loader size={16} className="mr-2 animate-spin" />
+              Uploading...
+            </>
+          ) : isMinting === MintingNFT.START ? (
+            <>
+              <Loader size={16} className="mr-2 animate-spin" />
+              Minting...
+            </>
+          ) : (
+            "Mint"
+          )}
+        </Button>
+        <AlertDialogCancel className="absolute top-2 right-2 p-0 bg-transparent hover:bg-transparent border-0 size-9 rounded-full">
+          <X size={16} />
+        </AlertDialogCancel>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+};
+
+const BuyTicketPopup = ({
+  eventId,
+  isPurchasing,
+  setIsPurchasing,
+  numTicket,
+  setNumTicket,
+  seats,
+  capacity,
+  eventType,
+  children,
+  purchaserEmail,
+  creatorEmail,
+  title,
+  location,
+}: {
+  eventId: number;
+  setIsPurchasing: any;
+  isPurchasing: boolean;
+  numTicket: number;
+  setNumTicket: any;
+  seats: number;
+  capacity: number;
+  eventType: string;
+  children: React.ReactNode;
+  purchaserEmail: string;
+  creatorEmail: string;
+  title: string;
+  location: string;
+}) => {
+  async function handleSubmit(e: any) {
+    e.preventDefault();
+    if (!numTicket) {
+      toast.info("Please provide the number of tickets.");
+      return;
+    } else if (numTicket < 1) {
+      toast.info("You need to purchase at least 1 ticket");
+      return;
+    } else if (numTicket > 5) {
+      toast.info("You can only purchase at most 5 tickets");
+      return;
+    } else if (Number(numTicket) + seats > capacity) {
+      toast.info("Not enough seats available");
+      return;
+    }
+
+    setIsPurchasing(true);
+    try {
+      const someonePurchaseTicket = await purchaseTicket(
+        Number(eventId),
+        Number(numTicket)
+      );
+
+      if (someonePurchaseTicket) {
+        const result = await purchaseTicketSuccessEmail(
+          purchaserEmail,
+          creatorEmail,
+          title,
+          Number(numTicket),
+          location
+        );
+
+        if (result) {
+          emitEventNotification({
+            title: "Ticket purchased",
+            description: `Transaction confirmed! You now have ${numTicket} tickets`,
+          });
+        } else {
+          console.log(
+            "There was an error processing the ticket purchase and/or notification."
+          );
+        }
+        toast.success("You now have a space in this event.");
+        setIsPurchasing(false);
+      }
+    } catch (error: any) {
+      console.log("FAILED TO PURCHASE TICKET:", error);
+      setIsPurchasing(false);
+    }
+  }
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild disabled={isPurchasing}>
+        {children}
+      </AlertDialogTrigger>
+      <AlertDialogContent className="max-w-[360px] w-full border rounded-[20px] backdrop-blur-3xl bg-secondary/60 flex flex-col gap-4">
+        <div className="w-full">
+          <div className="rounded-full size-16 bg-secondary/80 flex items-center justify-center border">
+            <MdPayments size={36} className="text-muted-foreground" />
+          </div>
+        </div>
+
+        <h1 className="text-lg md:text-[22px] font-bold">Purchase Ticket</h1>
+        <p className="text-xs md:text-sm text-muted-foreground -mt-2">
+          {eventType === "FREE"
+            ? "You will not be charged for the ticket"
+            : "You will be charged for the ticket"}
+        </p>
+
+        <form onSubmit={handleSubmit} className="w-full flex flex-col gap-1">
+          <div className="flex flex-col gap-1">
+            <Label>Number of Tickets</Label>
+
+            <Input
+              onChange={(e: any) => setNumTicket(e.target.value)}
+              placeholder="3 Tickets"
+              className="h-10"
+              type="number"
+              min={1}
+              max={5}
+              disabled={isPurchasing}
+            />
+          </div>
+
+          <Label className="text-xs italic">
+            Seats Left: {capacity - seats}
+          </Label>
+
           <Button
-            className="w-full"
-            onClick={handleJoiningGroup}
-            disabled={isJoining}>
-            {isJoining ? (
+            disabled={isPurchasing || seats >= capacity}
+            type="submit"
+            className="mt-3">
+            {isPurchasing ? (
               <>
-                <Loader size={16} className="mr-2 animate-spin" />
-                Joining...
+                <Loader size={16} className="animate-spin mr-2" />
+                Please wait...
               </>
+            ) : eventType === "FREE" ? (
+              "Get Ticket"
             ) : (
-              "Join"
+              "Buy Ticket"
             )}
           </Button>
-          <AlertDialogCancel disabled={isJoining} className="w-full">
-            Cancel
+          <AlertDialogCancel className="absolute top-2 right-2 p-0 bg-transparent hover:bg-transparent border-0 size-9 rounded-full">
+            <X size={16} />
           </AlertDialogCancel>
+        </form>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+};
+
+const JoinGroupPopup = ({
+  eventId,
+  children,
+}: {
+  eventId: number;
+  children: React.ReactNode;
+}) => {
+  const router = useRouter();
+  const [isJoining, setIsJoining] = useState(false);
+
+  const handleJoiningGroup = async () => {
+    setIsJoining(true);
+    try {
+      const joined = await joinGroup(Number(eventId));
+
+      if (joined) {
+        toast.success("Successfully joined group");
+        router.push(`/rooms/${Number(eventId)}`);
+      }
+    } catch (error: any) {
+      console.log("FAILED TO JOIN GROUP:", error);
+    } finally {
+      setIsJoining(false);
+    }
+  };
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
+      <AlertDialogContent className="max-w-[360px] w-full border rounded-[20px] backdrop-blur-3xl bg-secondary/60 flex flex-col gap-4">
+        <div className="w-full">
+          <div className="rounded-full size-16 bg-secondary/80 flex items-center justify-center border">
+            <PiWechatLogoDuotone size={36} className="text-muted-foreground" />
+          </div>
         </div>
+
+        <h1 className="text-lg md:text-[22px] font-bold">Join Space</h1>
+
+        <p className="text-xs md:text-sm text-muted-foreground -mt-2">
+          Before the event begins, join the conversation to learn more about it
+          and meet new people.
+        </p>
+
+        <Button onClick={handleJoiningGroup} disabled={isJoining}>
+          {isJoining ? (
+            <>
+              <Loader size={16} className="mr-2 animate-spin" />
+              Joining...
+            </>
+          ) : (
+            "Join"
+          )}
+        </Button>
+        <AlertDialogCancel className="absolute top-2 right-2 p-0 bg-transparent hover:bg-transparent border-0 size-9 rounded-full">
+          <X size={16} />
+        </AlertDialogCancel>
       </AlertDialogContent>
     </AlertDialog>
   );

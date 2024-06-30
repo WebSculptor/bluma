@@ -71,7 +71,6 @@ import { Label } from "@/components/ui/label";
 
 export default function CreateEventPage() {
   const router = useRouter();
-  const defaultNFT = "QmR2L6f8Z489SNoSP2rXeCEMv5V3Sf6TM4CZKEpjSMiQ4a";
 
   const { credentials, isFetchingUser } = useGlobalContext();
 
@@ -84,7 +83,6 @@ export default function CreateEventPage() {
     to: new Date(),
   });
   const [bannerUrl, setBannerUrl] = useState<File>();
-  const [eventNFT, setEventNFT] = useState<File>();
   const [prompt, setPrompt] = useState("");
   const [description, setDescription] = useState("");
   const [randomBannerCID, setRandomBannerCID] = useState<string>(bannerCIDs[5]);
@@ -101,7 +99,7 @@ export default function CreateEventPage() {
   const form = useForm<z.infer<typeof createEventSchema>>({
     resolver: zodResolver(createEventSchema),
     defaultValues: {
-      title: "STARKNET/CAIRO MASTERCLASS",
+      title: "",
       ticketCost: isEventFree ? 1 : 0,
       location: "https://bit.ly/4bQYpoO",
       capacity: 10,
@@ -110,7 +108,6 @@ export default function CreateEventPage() {
 
   async function onSubmit(values: z.infer<typeof createEventSchema>) {
     let banner;
-    let evtNft;
 
     try {
       if (bannerUrl === undefined) {
@@ -122,17 +119,8 @@ export default function CreateEventPage() {
         setIsCreating(CreatingEvent.STOP);
       }
 
-      if (eventNFT === undefined) {
-        evtNft = defaultNFT;
-      } else {
-        setIsCreating(CreatingEvent.UPLOADING);
-        const nft = await uploadBannerToPinata(eventNFT);
-        evtNft = nft;
-        setIsCreating(CreatingEvent.STOP);
-      }
-
       const refinedValues: ICreateEvent = {
-        title: ethers.encodeBytes32String(values.title),
+        title: values.title,
         imageUrl: banner,
         description: description,
         location: values.location,
@@ -142,7 +130,6 @@ export default function CreateEventPage() {
         eventStartsTime: new Date(eventDate?.from as any).getTime(),
         eventEndsTime: new Date(eventDate?.to as any).getTime(),
         ticketPrice: Number(isEventFree ? 0 : values.ticketCost),
-        nftUrl: evtNft,
       };
 
       if (refinedValues.description.length < 5) {
@@ -275,71 +262,6 @@ export default function CreateEventPage() {
             </>
           )}
         </div>
-
-        <>
-          <Input
-            hidden
-            className="hidden opacity-0"
-            type="file"
-            accept="image/*"
-            id="nft"
-            onChange={(e: any) => setEventNFT(e.target.files[0])}
-            disabled={isCreating !== CreatingEvent.STOP || !credentials}
-          />
-          <Label
-            htmlFor="nft"
-            className={cn(
-              "rounded-lg bg-secondary/50 p-2 pr-3 flex gap-2 items-center justify-between mx-auto w-[calc(100%-10%)] md:w-full h-14 border cursor-pointer relative",
-              {
-                "border-0": isCreating === CreatingEvent.UPLOADING,
-                "cursor-not-allowed opacity-50":
-                  isCreating !== CreatingEvent.STOP || !credentials,
-              }
-            )}>
-            {isCreating === CreatingEvent.UPLOADING && (
-              <div className="absolute bg-background/50 backdrop-blur-sm rounded-[inherit] size-full top-0 left-0 z-10 flex items-center justify-center">
-                <Loader size={18} className="animate-spin" />
-              </div>
-            )}
-            <div className="flex items-center gap-2 h-full">
-              <div className="w-12 h-full bg-foreground rounded-sm relative overflow-hidden">
-                <Image
-                  src={
-                    eventNFT
-                      ? URL.createObjectURL(eventNFT)
-                      : `https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${defaultNFT}`
-                  }
-                  alt="event-nft"
-                  fill
-                  priority
-                  className="size-full"
-                />
-              </div>
-
-              {eventNFT ? (
-                <div className="flex-1">
-                  <h1 className="text-sm select-none uppercase font-semibold">
-                    NFT Selected
-                  </h1>
-                  <p className="text-xs opacity-50">
-                    It will be distributed to participants
-                  </p>
-                </div>
-              ) : (
-                <div className="flex-1">
-                  <h1 className="text-sm select-none uppercase font-semibold">
-                    Upload NFT
-                  </h1>
-                  <p className="text-xs opacity-50">
-                    Select your own NFT or use the preset.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <RiNftLine size={20} className="text-muted-foreground" />
-          </Label>
-        </>
       </div>
 
       <Form {...form}>

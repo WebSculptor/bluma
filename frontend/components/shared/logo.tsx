@@ -1,10 +1,8 @@
 "use client";
 
 import { site } from "@/constants";
-import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import React from "react";
 
 export default function Logo() {
   const pathname = usePathname();
@@ -12,8 +10,8 @@ export default function Logo() {
   return (
     <Link
       href={pathname === "/" || pathname === "/home" ? "/" : "/home"}
-      className="w-max">
-      <h1 className={cn("text-base font-bold")}>{site.name}</h1>
+      className="w-max flex items-center gap-2">
+      <h1 className="text-base font-bold">{site.name}</h1>
     </Link>
   );
 }

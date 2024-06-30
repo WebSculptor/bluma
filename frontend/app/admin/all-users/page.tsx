@@ -12,55 +12,62 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { shortenAddress } from "@/lib/utils";
-import {
-  getAllEvents,
-  getAllTicketsOfAUser,
-  getAllUsers,
-} from "@/services/bluma-contract";
 import Image from "next/image";
 import Link from "next/link";
 import { site } from "@/constants";
+import {
+  getAllEvents,
+  getAllTickets,
+  getAllUsers,
+  getUserTicket,
+} from "@/services/bluma-contract";
+
+interface IUserWithDetails {
+  address: string;
+  avatar: string;
+  balance: number;
+  hostedEvents: number;
+  attendedTickets: number;
+}
 
 export default function AllUsersPage() {
-  const [allUsers, setAllUsers] = useState<IUserCredentials[]>([]);
+  const [allUsers, setAllUsers] = useState<IUserWithDetails[]>([]);
   const [isFetchingUsers, setIsFetchingUsers] = useState(true);
-  const [ownedEvents, setOwnedEvents] = useState<Record<string, IEvent[]>>({});
-  const [purchasedTickets, setPurchasedTickets] = useState<
-    Record<string, ITicket[]>
-  >({});
 
   useEffect(() => {
-    const fetchData = async () => {
+    (async () => {
       try {
         const users: any = await getAllUsers();
         const events = await getAllEvents();
 
-        const userOwnedEventsMap: Record<string, IEvent[] | any> = {};
-        const userTicketsMap: Record<string, ITicket[] | any> = {};
+        const userWithDetailsPromises = users.map(async (user: any) => {
+          const tickets = await getAllTickets();
 
-        await Promise.all(
-          users.map(async (user: any) => {
-            const tickets = await getAllTicketsOfAUser(user.address);
-            userTicketsMap[user?.address] = tickets;
+          const attendedTickets = tickets?.filter(
+            (ticket: any) => ticket?.buyer === user?.address
+          ).length;
 
-            const userOwnedEvents = events?.filter(
-              (event) => event.owner === user.address
-            );
-            userOwnedEventsMap[user.address] = userOwnedEvents;
-          })
-        );
+          return {
+            address: user?.address,
+            avatar: user.avatar,
+            balance: user.balance,
+            hostedEvents:
+              events?.filter(
+                (event: IEvent) => event?.owner?.address === user?.address
+              )?.length || 0,
+            attendedTickets: attendedTickets || 0,
+          };
+        });
 
-        setAllUsers(users);
-        setOwnedEvents(userOwnedEventsMap);
-        setPurchasedTickets(userTicketsMap);
+        const userWithDetails = await Promise.all(userWithDetailsPromises);
+
+        setAllUsers(userWithDetails);
       } catch (error) {
-        console.log("ERROR FETCHING USERS: ", error);
+        console.error("ERROR FETCHING USERS: ", error);
       } finally {
         setIsFetchingUsers(false);
       }
-    };
-
-    fetchData();
+    })();
   }, []);
 
   return (
@@ -108,12 +115,8 @@ export default function AllUsersPage() {
                       {shortenAddress(user.address)}
                     </Link>
                   </TableCell>
-                  <TableCell>
-                    {ownedEvents[user.address]?.length || 0}
-                  </TableCell>
-                  <TableCell>
-                    {purchasedTickets[user.address]?.length || 0}
-                  </TableCell>
+                  <TableCell>{user.hostedEvents}</TableCell>
+                  <TableCell>{user.attendedTickets}</TableCell>
                   <TableCell className="text-right">
                     <b>{user.balance}</b> ETH
                   </TableCell>

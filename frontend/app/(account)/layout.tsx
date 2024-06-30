@@ -21,10 +21,8 @@ export default function ProfileLayout({ children }: ILayout) {
   }
 
   return (
-    <MaxWrapper className="flex-1 flex flex-col">
-      <div className="flex-1 flex flex-col h-full p-4 pt-12 w-full">
-        {children}
-      </div>
-    </MaxWrapper>
+    <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col h-full w-full">{children}</div>
+    </div>
   );
 }

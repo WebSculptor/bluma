@@ -15,6 +15,7 @@ import { signOut as firebaseSignOut } from "firebase/auth";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { Toaster as Notifier } from "@/components/ui/toaster";
+import { useWeb3ModalAccount } from "@web3modal/ethers/react";
 
 // Create Context
 const GlobalContext = React.createContext<IGlobalContextProvider | undefined>(
@@ -24,9 +25,7 @@ const GlobalContext = React.createContext<IGlobalContextProvider | undefined>(
 export default function GlobalContextProvider({ children }: ILayout) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isFetchingUser, setIsFetchingUser] = useState<boolean>(false);
-  const [credentials, setCredentials] = useState<
-    IUserCredentials | undefined
-  >();
+  const [credentials, setCredentials] = useState<ICredential | undefined>();
 
   const getRegisteredUser = useCallback(async () => {
     return new Promise((resolve, reject) => {
@@ -68,25 +67,23 @@ export default function GlobalContextProvider({ children }: ILayout) {
   };
 
   useEffect(() => {
-    fetchUser();
 
-    if (!("Notification" in window)) {
-      console.log("This browser does not support notifications.");
-      return;
-    }
+      fetchUser();
 
-    Notification.requestPermission().then((perm) => {
-      if (perm === "granted") {
-        console.log("Notification permission granted");
-      } else {
-        console.log("Permission denied");
+      if (!("Notification" in window)) {
+        console.log("This browser does not support notifications.");
+        return;
       }
-    });
-  }, []);
 
-  useEffect(() => {
-    fetchUser();
-  }, [getRegisteredUser]);
+      Notification.requestPermission().then((perm) => {
+        if (perm === "granted") {
+          console.log("Permission granted");
+        } else {
+          console.log("Permission denied");
+        }
+      });
+
+  }, []);
 
   const signOut = async () => {
     try {

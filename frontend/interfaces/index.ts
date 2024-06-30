@@ -8,7 +8,7 @@ interface IAvatar {
   size: "sm" | "default";
 }
 
-interface IUserCredentials {
+interface ICredential {
   address: string;
   email: string;
   avatar: string;
@@ -26,15 +26,26 @@ interface ITicket {
   numberOfTicket: number;
 }
 
-interface IEventGroup {
+interface IRoomMessages {
+  sender: string;
+  email: string;
+  text: string;
+  timestamp: number;
+}
+
+interface IRoomMember {
+  user: ICredential;
+  joinTime: number;
+}
+
+interface IEventRoom {
   eventId: number;
   title: string;
   imageUrl: string;
   description: string;
-  members: string[];
+  members: IRoomMember[];
+  messages: IRoomMessages[];
 }
-
-type IGroupMembers = IUserCredentials & ITicket & IEventGroup;
 
 interface IWrapper {
   children: React.ReactNode;
@@ -47,11 +58,12 @@ interface IEvent {
   imageUrl: string;
   location: string;
   description: string;
-  owner: string;
+  owner: ICredential;
   seats: number;
   capacity: number;
   regStartsTime: number;
   regEndsTime: number;
+  room: IEventRoom;
   regStatus: string | number;
   eventStatus: string | number;
   eventType: string | number;
@@ -76,25 +88,15 @@ type ICreateEvent = Pick<
   | "regStartsTime"
   | "eventEndsTime"
   | "eventStartsTime"
-  | "nftUrl"
 >;
-
-interface IMessage {
-  sender: string;
-  email: string;
-  content: string;
-  timestamp: number;
-}
 
 interface IGlobalContextProvider {
   isAuthenticated: boolean;
   setIsAuthenticated: React.Dispatch<React.SetStateAction<boolean>>;
   fetchUser: () => void;
   isFetchingUser: boolean;
-  credentials: IUserCredentials | undefined;
-  setCredentials: React.Dispatch<
-    React.SetStateAction<IUserCredentials | undefined>
-  >;
+  credentials: ICredential | undefined;
+  setCredentials: React.Dispatch<React.SetStateAction<ICredential | undefined>>;
   signOut: () => Promise<void>;
 }
 

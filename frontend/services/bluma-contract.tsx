@@ -1,6 +1,6 @@
 import { EnEvent, EnStatus } from "@/enums";
 import { getStatus } from "@/lib/utils";
-import { getBlumaContracts, ethereum } from "./index";
+import { getBlumaContracts } from "./index";
 import { ethers } from "ethers";
 
 export const checkIfUserIsRegistered = async (address: string) => {
@@ -21,12 +21,12 @@ export const checkIfUserIsRegistered = async (address: string) => {
 
 export const getUser = async (
   address: string
-): Promise<IUserCredentials | undefined> => {
+): Promise<ICredential | undefined> => {
   try {
     const contract = await getBlumaContracts();
     const user = await contract.getUser(address);
 
-    const structuredUser: IUserCredentials = {
+    const structuredUser: ICredential = {
       email: user[0],
       address: user[1],
       isRegistered: user[2],
@@ -48,14 +48,12 @@ export const getUser = async (
   }
 };
 
-export const getAllUsers = async (): Promise<
-  IUserCredentials[] | undefined
-> => {
+export const getAllUsers = async (): Promise<ICredential[] | undefined> => {
   try {
     const contract = await getBlumaContracts();
     const users = await contract.getAllUser();
 
-    const redefinedUsers: IUserCredentials[] = await users?.map((usr: any) => ({
+    const redefinedUsers: ICredential[] = await users?.map((usr: any) => ({
       email: usr[0],
       address: usr[1],
       isRegistered: usr[2],
@@ -71,9 +69,9 @@ export const getAllUsers = async (): Promise<
 };
 
 export const createAccount = async (
-  credentials: IUserCredentials
-): Promise<IUserCredentials> => {
-  if (!ethereum) {
+  credentials: ICredential
+): Promise<ICredential> => {
+  if (!window.ethereum) {
     reportError("Please install a browser provider");
     return Promise.reject(new Error("Browser provider not installed"));
   }
@@ -95,18 +93,17 @@ export const createAccount = async (
 };
 
 export const createEvent = async (event: ICreateEvent) => {
-  if (!ethereum) {
+  if (!window.ethereum) {
     reportError("Please install a browser provider");
     return Promise.reject(new Error("Browser provider not installed"));
   }
 
-  const isEventPaid = event.ticketPrice === 0 ? false : true;
-  const newTicketPrice = event.ticketPrice === 0 ? 10 : event.ticketPrice;
+  const isEventPaid = event.ticketPrice !== 0;
+  const newTicketPrice = event.ticketPrice || 10;
 
   try {
     const contract = await getBlumaContracts();
 
-    // Log parameters for debugging
     const redefinedEventData = {
       _title: event.title,
       _imageUrl: event.imageUrl,
@@ -119,8 +116,9 @@ export const createEvent = async (event: ICreateEvent) => {
       _eventEndsTime: event.eventEndsTime,
       _ticketPrice: newTicketPrice,
       _isEventPaid: isEventPaid,
-      _nftUrl: event.nftUrl,
     };
+
+    console.log(redefinedEventData);
 
     const tx = await contract.createEvent(
       redefinedEventData._title,
@@ -133,12 +131,7 @@ export const createEvent = async (event: ICreateEvent) => {
       redefinedEventData._eventStartsTime,
       redefinedEventData._eventEndsTime,
       redefinedEventData._ticketPrice,
-      redefinedEventData._isEventPaid,
-      redefinedEventData._nftUrl,
-      {
-        gasPrice: 100000000000,
-        gasLimit: 456902,
-      }
+      redefinedEventData._isEventPaid
     );
 
     const result = await tx.wait();
@@ -146,7 +139,6 @@ export const createEvent = async (event: ICreateEvent) => {
       reportError("ERROR CREATING EVENT...");
       return Promise.reject("ERROR CREATING EVENT...");
     }
-    console.log("REFINED EVENT DATA: ", redefinedEventData);
 
     return Promise.resolve(tx);
   } catch (error) {
@@ -163,37 +155,76 @@ export const getAllEvents = async () => {
     }
 
     const contract = await getBlumaContracts();
-    const events: IEvent[] = await contract.getAllEvents();
 
-    if (!events) {
-      console.log("No events found");
-      return undefined;
-    }
+    const events = await contract.getAllEvents();
 
-    const refinedEvents = events.map((event: any) => ({
-      eventId: Number(event[0]),
-      title: String(ethers.decodeBytes32String(event[1])),
-      imageUrl: String(event[2]),
-      location: String(event[3]),
-      description: String(event[4]),
-      owner: String(event[5]),
-      seats: Number(event[6]),
-      capacity: Number(event[7]),
-      regStartsTime: Number(event[8]),
-      regEndsTime: Number(event[9]),
-      regStatus:
-        EnStatus[getStatus(Date.now(), Number(event[8]), Number(event[9]))],
-      eventStatus:
-        EnStatus[getStatus(Date.now(), Number(event[13]), Number(event[14]))],
-      eventType: EnEvent[Number(event[12])],
-      nftUrl: String(event[13]),
-      eventStartsTime: Number(event[14]),
-      eventEndsTime: Number(event[15]),
-      ticketPrice: Number(event[16]),
-      totalSales: Number(event[17]),
-      createdAt: Number(event[18]),
-      isEventPaid: Boolean(event[19]),
-    }));
+    if (!events.length) return [];
+
+    const refinedEvents = await Promise.all(
+      events?.map(async (event: any) => {
+        const eventOwner = await getUser(event[5]);
+
+        const roomMembers = await Promise.all(
+          event[10]?.[4]?.map(async (member: any) => {
+            const user = await getUser(member?.user);
+
+            return {
+              ...user,
+              joinTime: Number(member.joinTime),
+            };
+          })
+        );
+
+        const roomMessages = await Promise.all(
+          event[10]?.[5]?.map(async (message: any) => {
+            const user = await getUser(message?.sender);
+
+            return {
+              sender: user?.address,
+              avatar: user?.avatar,
+              email: String(message.email),
+              text: String(message.text),
+              timestamp: Number(message.timestamp),
+            };
+          })
+        );
+
+        return {
+          eventId: Number(event[0]),
+          title: String(event[1]),
+          imageUrl: String(event[2]),
+          location: String(event[3]),
+          description: String(event[4]),
+          owner: eventOwner,
+          seats: Number(event[6]),
+          capacity: Number(event[7]),
+          regStartsTime: Number(event[8]),
+          regEndsTime: Number(event[9]),
+          room: {
+            eventId: Number(event[10][0]),
+            title: String(event[10][1]),
+            imageUrl: event[10][2],
+            description: String(event[10][3]),
+            members: roomMembers,
+            messages: roomMessages,
+          },
+          regStatus:
+            EnStatus[getStatus(Date.now(), Number(event[8]), Number(event[9]))],
+          eventStatus:
+            EnStatus[
+              getStatus(Date.now(), Number(event[15]), Number(event[16]))
+            ],
+          eventType: EnEvent[Number(event[13])],
+          nftUrl: event[14],
+          eventStartsTime: Number(event[15]),
+          eventEndsTime: Number(event[16]),
+          ticketPrice: Number(event[17]),
+          totalSales: Number(event[18]),
+          createdAt: Number(event[19]),
+          isEventPaid: Boolean(event[20]),
+        };
+      })
+    );
 
     return refinedEvents;
   } catch (error) {
@@ -203,26 +234,85 @@ export const getAllEvents = async () => {
 };
 
 export const getEventById = async (
-  eventId: any
+  eventId: number
 ): Promise<IEvent | undefined> => {
   try {
     if (!window.ethereum) {
       throw new Error("Please install a browser provider");
     }
 
-    const contract = await getBlumaContracts();
     const events = await getAllEvents();
 
-    if (!events) {
+    const singleEvent = events?.find(
+      (evt: IEvent) => evt?.eventId === Number(eventId)
+    );
+
+    if (!singleEvent) {
       console.log("No event found");
       return undefined;
     }
 
-    const refinedEvent = events?.find(
-      (event: IEvent) => event?.eventId === eventId
-    );
+    return singleEvent;
+  } catch (error) {
+    reportError(error);
+    throw error;
+  }
+};
 
-    return refinedEvent;
+export const getEventGroupById = async (eventId: number) => {
+  if (!window.ethereum) {
+    throw new Error("Please install a browser provider");
+  }
+
+  try {
+    const event = await getEventById(eventId);
+
+    if (!event) {
+      console.log("No event found");
+      return undefined;
+    }
+
+    return event.room;
+  } catch (error) {
+    reportError(error);
+    throw error;
+  }
+};
+
+export const mintNFT = async (eventId: number, nftCID: string) => {
+  if (!window.ethereum) {
+    throw new Error("Please install a browser provider");
+  }
+  try {
+    const contract = await getBlumaContracts();
+    console.log({ eventId, nftCID });
+    const tx = await contract.mintNft(eventId, nftCID);
+
+    const result = await tx.wait();
+
+    if (!result.status) throw new Error("Failed to mint nft");
+
+    return result;
+  } catch (error) {
+    reportError(error);
+    throw error;
+  }
+};
+
+export const createSpace = async (eventId: number) => {
+  if (!window.ethereum) {
+    throw new Error("Please install a browser provider");
+  }
+
+  try {
+    const contract = await getBlumaContracts();
+    const tx = await contract.createGroup(eventId);
+
+    const result = await tx.wait();
+
+    if (!result.status) throw new Error("Failed to create space");
+
+    return result;
   } catch (error) {
     reportError(error);
     throw error;
@@ -230,11 +320,11 @@ export const getEventById = async (
 };
 
 export const purchaseTicket = async (eventId: any, numberOfTickets: number) => {
-  try {
-    if (!window.ethereum) {
-      throw new Error("Please install a browser provider");
-    }
+  if (!window.ethereum) {
+    throw new Error("Please install a browser provider");
+  }
 
+  try {
     const contract = await getBlumaContracts();
     const tx = await contract.purchaseTicket(eventId, numberOfTickets);
 
@@ -249,29 +339,20 @@ export const purchaseTicket = async (eventId: any, numberOfTickets: number) => {
   }
 };
 
-export const getAllEventGroups = async () => {
+export const refundFee = async (eventId: any) => {
+  if (!window.ethereum) {
+    throw new Error("Please install a browser provider");
+  }
+
   try {
-    if (!window.ethereum) {
-      throw new Error("Please install a browser provider");
-    }
-
     const contract = await getBlumaContracts();
-    const rooms = await contract.getAllEventGroups();
+    const tx = await contract.refundFee(eventId);
 
-    if (!rooms) {
-      console.log("No groups found");
-      return undefined;
-    }
+    const result = await tx.wait();
 
-    const evtGrp = rooms?.map((grp: any) => ({
-      eventId: Number(grp[0]),
-      title: String(ethers.decodeBytes32String(grp[1])),
-      imageUrl: grp[2],
-      description: grp[3],
-      members: grp[4],
-    }));
+    if (!result.status) throw new Error("Failed to refund fee");
 
-    return evtGrp;
+    return result;
   } catch (error) {
     reportError(error);
     throw error;
@@ -304,89 +385,39 @@ export const getGroupMembersOfAnEvent = async (eventId: number) => {
   }
 };
 
-export const getEventGroupById = async (eventId: number) => {
-  try {
-    if (!window.ethereum) {
-      throw new Error("Please install a browser provider");
-    }
-
-    const contract = await getBlumaContracts();
-    const group = await contract.getEventGroup(eventId);
-
-    if (!group) {
-      console.log("No group with the id found");
-      return undefined;
-    }
-
-    // Fetch user credentials for each member
-    const membersPromises = (group[4] || []).map(async (mb: any) => {
-      const user = await getUser(String(mb[0]));
-      return {
-        timestamp: Number(mb[1]),
-        ...user,
-      };
-    });
-
-    // // Fetch user credentials for each sender
-    const senderPromises = (group[5] || []).map(async (sd: any) => {
-      const user = await getUser(String(sd[0]));
-      return {
-        sender: String(sd[0]),
-        email: String(sd[1]),
-        content: String(sd[2]),
-        timestamp: Number(sd[3]),
-        ...user,
-      };
-    });
-
-    // Resolve promises
-    const members = await Promise.all(membersPromises);
-    const messages = await Promise.all(senderPromises);
-
-    const redefinedGroup = {
-      eventId: Number(group[0]),
-      title: String(ethers.decodeBytes32String(group[1])),
-      imageUrl: String(group[2]),
-      description: String(group[3]),
-      members: members,
-      messages: messages,
-    };
-
-    return redefinedGroup;
-  } catch (error) {
-    reportError(error);
-    throw error;
+export const getUserTicket = async (address: string) => {
+  if (!window.ethereum) {
+    throw new Error("Please install a browser provider");
   }
-};
 
-export const getAllTicketsOfAUser = async (address: string) => {
   try {
-    if (!window.ethereum) {
-      throw new Error("Please install a browser provider");
-    }
-
     const contract = await getBlumaContracts();
-    const tickets = await contract.getTicket(address);
+    const ticket = await contract.getTicket(address);
 
-    const redefinedTickets = {
-      ticketId: Number(tickets[0]),
-      eventId: Number(tickets[1]),
-      buyer: String(tickets[2]),
-      ticketCost: Number(tickets[3]),
-      purchaseTime: Number(tickets[4]),
-      numberOfTicket: Number(tickets[5]),
-    };
-
-    if (!redefinedTickets) {
+    if (!ticket) {
       console.log("No tickets bought");
       return undefined;
     }
 
-    const allTickets = await getAllTickets();
+    const refinedTicket = {
+      ticketId: Number(ticket[0]),
+      eventId: Number(ticket[1]),
+      buyer: String(ticket[2]),
+      ticketCost: Number(ticket[3]),
+      purchaseTime: Number(ticket[4]),
+      numberOfTicket: Number(ticket[5]),
+    };
 
-    const userTickets = allTickets?.filter((tk) => tk?.buyer === address);
+    // Fetch user details for each ticket buyer
+    const user: ICredential | undefined = await getUser(refinedTicket?.buyer);
 
-    return userTickets;
+    // Merge ticket details with user details
+    const ticketWithUserDetails = {
+      ...refinedTicket,
+      ...user,
+    };
+
+    return ticketWithUserDetails;
   } catch (error) {
     reportError(error);
     throw error;
@@ -394,60 +425,62 @@ export const getAllTicketsOfAUser = async (address: string) => {
 };
 
 export const getAllTickets = async () => {
-  try {
-    if (!window.ethereum) {
-      throw new Error("Please install a browser provider");
-    }
+  if (!window.ethereum) {
+    throw new Error("Please install a browser provider");
+  }
 
+  try {
     const contract = await getBlumaContracts();
     const tickets = await contract.getAllTickets();
 
-    const redefinedTickets = tickets?.map((ticket: any) => ({
-      ticketId: Number(ticket[0]),
-      eventId: Number(ticket[1]),
-      buyer: String(ticket[2]),
-      ticketCost: Number(ticket[3]),
-      purchaseTime: Number(ticket[4]),
-      numberOfTicket: Number(ticket[5]),
-    }));
-
-    if (!redefinedTickets) {
+    if (!tickets || tickets.length === 0) {
       console.log("No tickets bought");
-      return undefined;
+      return [];
     }
 
-    // Consolidate tickets by buyer
-    const ticketMap = new Map();
-
-    redefinedTickets.forEach((ticket: ITicket) => {
-      if (ticketMap.has(ticket.buyer)) {
-        const existingTicket = ticketMap.get(ticket.buyer);
-        existingTicket.numberOfTicket += ticket.numberOfTicket;
-        existingTicket.ticketCost += ticket.ticketCost;
-        existingTicket.purchaseTime = Math.max(
-          existingTicket.purchaseTime,
-          ticket.purchaseTime
+    // Fetch user details for each ticket using getUserTicket function
+    const promises = tickets?.map(async (ticket: any) => {
+      try {
+        const ticketDetails = {
+          ticketId: Number(ticket[0]),
+          eventId: Number(ticket[1]),
+          buyer: String(ticket[2]),
+          ticketCost: Number(ticket[3]),
+          purchaseTime: Number(ticket[4]),
+          numberOfTicket: Number(ticket[5]),
+        };
+        const userTicket = await getUserTicket(ticketDetails.buyer);
+        return { ...ticketDetails, ...userTicket };
+      } catch (error) {
+        console.error(
+          `Failed to fetch user ticket for buyer ${ticket[2]}:`,
+          error
         );
-      } else {
-        ticketMap.set(ticket.buyer, { ...ticket });
+        return null;
       }
-    });
-
-    // Convert the map back to an array
-    const consolidatedTickets = Array.from(ticketMap.values());
-
-    // Fetch user details for each unique buyer
-    const promises = consolidatedTickets.map(async (ticket) => {
-      const user: IUserCredentials | undefined = await getUser(ticket?.buyer);
-      return {
-        ...ticket,
-        ...user,
-      };
     });
 
     const ticketsWithUserDetails = await Promise.all(promises);
 
-    return ticketsWithUserDetails;
+    // Filter out any null entries (failed fetches)
+    const validTickets = ticketsWithUserDetails.filter(
+      (ticket) => ticket !== null
+    );
+
+    // Consolidate tickets by buyer
+    const consolidatedTickets = validTickets.reduce((acc, ticket) => {
+      const existingTicket = acc.find(
+        (t: any) => t.buyer === ticket.buyer && t.eventId === ticket.eventId
+      );
+      if (existingTicket) {
+        existingTicket.numberOfTicket += ticket.numberOfTicket;
+      } else {
+        acc.push(ticket);
+      }
+      return acc;
+    }, []);
+
+    return consolidatedTickets;
   } catch (error) {
     reportError(error);
     throw error;
@@ -470,7 +503,7 @@ export const getAllTicketsOfAnEvent = async (eventId: number) => {
 
     // Filter tickets by eventId
     const eventTickets = allTickets?.filter(
-      (ticket) => Number(ticket.eventId) === Number(eventId)
+      (ticket: any) => Number(ticket.eventId) === Number(eventId)
     );
 
     return eventTickets;
@@ -487,10 +520,12 @@ export const joinGroup = async (eventId: number) => {
     }
 
     const contract = await getBlumaContracts();
-    const joined = await contract.joinGroup(eventId);
+    const joined = await contract.joinGroup(Number(eventId));
 
-    if (!joined) {
-      console.log("Cound not join group");
+    const result = await joined.wait();
+
+    if (!result.status) {
+      console.log("Could not join space");
       return false;
     }
 
@@ -515,12 +550,12 @@ export const getAllGroupMessages = async (groupId: number) => {
       return [];
     }
 
-    const redefinedGroupMessages: IMessage[] = await Promise.all(
+    const redefinedGroupMessages: IRoomMessages[] = await Promise.all(
       groupMessages.map(async (message: any) => {
-        const structuredMessage: IMessage = {
+        const structuredMessage: IRoomMessages = {
           sender: String(message[0]),
           email: String(message[1]),
-          content: String(message[2]),
+          text: String(message[2]),
           timestamp: Number(message[3]),
         };
 
@@ -567,6 +602,27 @@ export const sendMessage = async (groupId: number, msg: string) => {
       msg,
       groupId,
     });
+    reportError(error);
+    throw error;
+  }
+};
+
+export const withdrawEventFee = async (eventId: number) => {
+  if (!window.ethereum) throw new Error("Please install a browser provider");
+
+  try {
+    const contract = await getBlumaContracts();
+    const withdraw = await contract.withdrawEventFee(Number(eventId));
+
+    const result = await withdraw.wait();
+
+    if (!result.status) {
+      console.log("Failed to withdraw event fee");
+      return false;
+    }
+
+    return true;
+  } catch (error) {
     reportError(error);
     throw error;
   }

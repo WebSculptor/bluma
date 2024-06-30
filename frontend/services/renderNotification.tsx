@@ -88,3 +88,59 @@ export const createEventSuccessEmail = async (
     return false;
   }
 };
+
+export const purchaseTicketSuccessEmail = async (
+  purchaserEmail: string,
+  creatorEmail: string,
+  title: string,
+  amount: number,
+  location: string
+) => {
+  try {
+    const [purchaseResponse, updateCreatorResponse] = await Promise.all([
+      fetch(`${process.env.NEXT_PUBLIC_NOTIFICATION_ENDPOINT}/purchaseTicket`, {
+        method: "POST",
+        headers: {
+          Accept: "*/*",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: purchaserEmail,
+          amount,
+          title,
+          location,
+        }),
+      }),
+      fetch(
+        `${process.env.NEXT_PUBLIC_NOTIFICATION_ENDPOINT}/updateCreatorOnPurchaseTicket`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "*/*",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: creatorEmail,
+            amount,
+            title,
+          }),
+        }
+      ),
+    ]);
+
+    if (purchaseResponse.ok && updateCreatorResponse.ok) {
+      const purchaseData = await purchaseResponse.json();
+      const updateCreatorData = await updateCreatorResponse.json();
+      console.log("EVENT CREATED:", purchaseData, updateCreatorData);
+      return true;
+    } else {
+      const purchaseErrorData = await purchaseResponse.json();
+      const updateCreatorErrorData = await updateCreatorResponse.json();
+      console.log("ERROR:", purchaseErrorData, updateCreatorErrorData);
+      return false;
+    }
+  } catch (error) {
+    console.log("ERROR CREATING EVENT:", error);
+    return false;
+  }
+};

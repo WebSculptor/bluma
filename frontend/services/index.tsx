@@ -3,7 +3,7 @@ import BLUMA_CT_ABI from "@/json/bluma.json";
 import BLUMA_TOKEN_ABI from "@/json/bluma-token.json";
 import BLUMA_NFT_ABI from "@/json/bluma-nft.json";
 
-export let ethereum: any;
+let ethereum: any;
 if (typeof window !== "undefined") ethereum = (window as any).ethereum;
 
 const BLUMA_CA = process.env.NEXT_PUBLIC_BLUMA_CA!;
@@ -11,12 +11,16 @@ const TOKEN_CA = process.env.NEXT_PUBLIC_TOKEN_CA!;
 const NFT_CA = process.env.NEXT_PUBLIC_NFT_CA!;
 
 export const getRequiredSigner = async () => {
-  if (!window.ethereum) {
+  if (!ethereum) {
     throw new Error("MetaMask is not installed");
   }
 
+  if (typeof ethereum.request !== "function") {
+    throw new Error("MetaMask does not support ethereum.request method");
+  }
+
   try {
-    const accounts = await ethereum?.request({ method: "eth_accounts" });
+    const accounts = await ethereum.request({ method: "eth_accounts" });
 
     let provider;
     let signer;
@@ -32,7 +36,6 @@ export const getRequiredSigner = async () => {
       );
       const wallet = ethers.Wallet.createRandom();
       signer = wallet.connect(provider);
-
       return signer;
     }
   } catch (error) {
@@ -49,7 +52,7 @@ export const getBlumaContracts = async () => {
   try {
     const signer = await getRequiredSigner();
 
-    const contracts = new ethers.Contract(BLUMA_CA, BLUMA_CT_ABI, signer);
+    const contracts = new ethers.Contract(BLUMA_CA, BLUMA_CT_ABI.abi, signer);
     return contracts;
   } catch (error) {
     console.error("Error getting Ethereum contracts:", error);
@@ -65,7 +68,11 @@ export const getBlumaTokenContract = async () => {
   try {
     const signer = await getRequiredSigner();
 
-    const contracts = new ethers.Contract(TOKEN_CA, BLUMA_TOKEN_ABI, signer);
+    const contracts = new ethers.Contract(
+      TOKEN_CA,
+      BLUMA_TOKEN_ABI.abi,
+      signer
+    );
     return contracts;
   } catch (error) {
     console.error("Error getting Ethereum contracts:", error);
@@ -81,7 +88,7 @@ export const getBlumaNFTContract = async () => {
   try {
     const signer = await getRequiredSigner();
 
-    const contracts = new ethers.Contract(NFT_CA, BLUMA_NFT_ABI, signer);
+    const contracts = new ethers.Contract(NFT_CA, BLUMA_NFT_ABI.abi, signer);
     return contracts;
   } catch (error) {
     console.error("Error getting Ethereum contracts:", error);

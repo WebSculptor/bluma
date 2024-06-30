@@ -5,44 +5,124 @@ import { useGlobalContext } from "@/providers/global-provider";
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
-import { useRouter } from "next/navigation";
 import { Badge } from "../ui/badge";
-import { format } from "date-fns";
 import moment from "moment";
+import ReactMarkdown from "react-markdown";
 
 export default function EventCard({
   event,
   hide,
+  compact,
 }: {
   event: IEvent;
   hide?: boolean;
+  compact?: boolean;
 }) {
-  const router = useRouter();
   const { credentials } = useGlobalContext();
 
   const {
     eventId,
     title,
     imageUrl,
-    location,
     description,
     owner,
-    seats,
-    capacity,
-    regStartsTime,
-    regEndsTime,
     regStatus,
     eventStatus,
     eventType,
     eventStartsTime,
     eventEndsTime,
     ticketPrice,
-    totalSales,
-    createdAt,
-    isEventPaid,
   } = event && event;
 
-  return (
+  return compact ? (
+    <Link
+      href={`/event/${eventId}`}
+      className="flex flex-col w-full sm:hover:bg-secondary/50 sm:rounded-lg transition-opacity mb-4 last:mb-0 sm:mb-0 sm:p-4">
+      <div className="pb-2 mb-2 border-b">
+        <p className="text-sm font-medium text-muted-foreground">
+          {eventStatus === "OPEN" ? (
+            <>Starts {moment(eventStartsTime).endOf("day").fromNow()}</>
+          ) : eventStatus === "PENDING" ? (
+            <>
+              {moment(eventStartsTime).format("MMMM Do YYYY")} -{" "}
+              {moment(eventEndsTime).format("MMMM Do YYYY")}
+            </>
+          ) : (
+            "Event has ended"
+          )}
+        </p>
+      </div>
+
+      <div className="flex items-start flex-col gap-2 sm:gap-0 sm:flex-row">
+        <div className="flex items-start gap-2 size-full max-w-24 sm:max-w-28 mt-px">
+          {regStatus === "PENDING" ? (
+            <Badge variant="pending" className="w-max text-xs font-medium">
+              Coming Soon
+            </Badge>
+          ) : regStatus === "OPEN" ? (
+            <Badge variant="success" className="w-max text-xs font-medium">
+              On Going
+            </Badge>
+          ) : (
+            <Badge variant="destructive" className="w-max text-xs font-medium">
+              Ended
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex flex-col flex-1">
+          <h1 className="flex items-end justify-between gap-4 w-full">
+            <span className="text-sm md:text-base font-medium">{title}</span>
+
+            <span className="text-sm flex items-center font-medium">
+              {eventType === "PAID" ? `${ticketPrice} ETH` : "Free"}
+            </span>
+          </h1>
+
+          <div className="text-sm flex items-center gap-2 w-max group my-1">
+            <span className="size-5 bg-secondary rounded-xl border relative">
+              <Image
+                alt={owner?.address}
+                src={`https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${owner?.avatar}`}
+                width={20}
+                height={20}
+                priority
+                className={`size-full rounded-[inherit] ${
+                  owner?.avatar ? "rounded-full" : ""
+                }`}
+              />
+            </span>
+            <p className="text-sm text-muted-foreground">
+              {credentials?.address === owner?.address ? (
+                "Hosted by You"
+              ) : (
+                <>By {shortenAddress(owner?.address)}</>
+              )}
+            </p>
+          </div>
+
+          <ReactMarkdown
+            className="overflow-hidden leading-6 whitespace-pre-wrap break-words flex-1 text-sm line-clamp-2"
+            components={{
+              pre: ({ node, ...props }) => (
+                <pre
+                  {...props}
+                  className="text-sm leading-6 markdown prose w-full break-words"
+                />
+              ),
+              code: ({ node, ...props }) => (
+                <code
+                  className="text-primary bg-secondary px-1 py-0.5 text-sm markdown prose break-words rounded-sm"
+                  {...props}
+                />
+              ),
+            }}>
+            {description}
+          </ReactMarkdown>
+        </div>
+      </div>
+    </Link>
+  ) : (
     <div
       className={cn(
         "flex items-start flex-col md:flex-row w-full gap-4 md:gap-6 group",
@@ -95,36 +175,33 @@ export default function EventCard({
             <div className="text-sm flex items-center gap-2 w-max group">
               <span className="size-5 bg-secondary rounded-xl border relative">
                 <Image
-                  alt={owner}
-                  src={
-                    credentials && credentials?.avatar
-                      ? `https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${credentials?.avatar}`
-                      : "/assets/logo.png"
-                  }
+                  alt={owner?.address}
+                  src={`https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${owner?.avatar}`}
                   width={20}
                   height={20}
                   priority
                   className={`size-full rounded-[inherit] ${
-                    credentials?.avatar ? "rounded-full" : ""
+                    owner?.avatar ? "rounded-full" : ""
                   }`}
                 />
               </span>
               <b>
-                {credentials?.address === owner ? (
+                {credentials?.address === owner?.address ? (
                   "Hosted by You"
                 ) : (
                   <>
-                    {hide ? "Owned by" : "Hosted by"} {shortenAddress(owner)}
+                    {hide ? "Owned by" : "Hosted by"}{" "}
+                    {shortenAddress(owner?.address)}
                   </>
                 )}
               </b>
             </div>
 
-            {/* //?SEPERATOR */}
+            {/* //? SEPARATOR */}
             <div className="my-2 py-2 flex-1 flex flex-col">
               <span className="w-full h-px bg-secondary" />
             </div>
-            {/* //?SEPERATOR */}
+            {/* //? SEPARATOR */}
 
             <div className="mb-1 flex items-center gap-2">
               <p className="text-sm flex items-center font-medium text-muted-foreground">

@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import { Noto_Sans as FontSans } from "next/font/google";
+import { Mulish as FontSans } from "next/font/google";
 
 import "@/styles/globals.css";
 import { cn } from "@/lib/utils";
 import { site } from "@/constants";
 import GlobalSession from "@/providers";
 import Header from "@/components/shared/header";
-import MaxWrapper from "@/components/shared/max-wrapper";
 import { Analytics } from "@vercel/analytics/react";
 
 const fontSans = FontSans({
@@ -18,7 +17,7 @@ export const metadata: Metadata = {
   title: `${site.name} ・ ${site.description}`,
   description: site.description,
   icons: {
-    icon: "/assets/logo.png",
+    icon: "/favicon.ico",
   },
   keywords: ["luma", "event", "web3"],
   authors: [
@@ -42,7 +41,7 @@ export default function RootLayout({
           fontSans.variable
         )}>
         <GlobalSession>
-          <Analytics />
+          {/* <Analytics /> */}
           <div className="flex-1 flex flex-col">
             <Header />
             {children}

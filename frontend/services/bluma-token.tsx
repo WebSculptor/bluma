@@ -10,7 +10,7 @@ export const getTokenTotalSupply = async () => {
     }
 
     const contract = await getBlumaTokenContract();
-    const supply: number = await contract.totalSupplys();
+    const supply: number = await contract.totalSupply();
 
     return Number(supply);
   } catch (error) {
@@ -58,7 +58,7 @@ export const checkIfUserHasMinted = async (address: string) => {
     }
 
     const contract = await getBlumaTokenContract();
-    const minted: boolean = await contract.hasMinted_(address);
+    const minted: boolean = await contract.hasMinted(address);
 
     return minted;
   } catch (error) {
@@ -67,15 +67,14 @@ export const checkIfUserHasMinted = async (address: string) => {
   }
 };
 
-export const mintTokenToUser = async (address: string, amount: string) => {
+export const mintTokenToUser = async (address: string, amount: number) => {
+  if (!window.ethereum) {
+    throw new Error("Please install a browser provider");
+  }
   try {
-    if (!window.ethereum) {
-      throw new Error("Please install a browser provider");
-    }
-
     const contract = await getBlumaTokenContract();
 
-    const tx = await contract.mint(address, ethers.parseUnits(amount));
+    const tx = await contract.mint(address, Number(amount));
     const result = await tx.wait();
 
     if (!result.status) throw new Error("Could not mint token");
@@ -86,5 +85,3 @@ export const mintTokenToUser = async (address: string, amount: string) => {
     throw error;
   }
 };
-
-//  const minted = await contract.hasMinted_(account);

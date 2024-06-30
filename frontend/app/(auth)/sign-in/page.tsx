@@ -51,9 +51,7 @@ export default function SignInPage() {
   const { STOP } = Authenticating;
 
   const [isRegistering, setIsRegistering] = useState<string | boolean>(STOP);
-  const [userCred, setUserCred] = useState<IUserCredentials | undefined>(
-    undefined
-  );
+  const [userCred, setUserCred] = useState<ICredential | undefined>(undefined);
   const [hasOTPBeenSent, setHasOTPBeenSent] = useState(false);
   const [beforeSending, setBeforeSending] = useState(false);
   const [isNewAccount, setIsNewAccount] = useState(false);
@@ -155,9 +153,7 @@ const EmailForm = ({
         setUserAvatar(refinedValues.avatar);
         setIsRegistering(START);
 
-        const userCredentials: IUserCredentials = await createAccount(
-          refinedValues
-        );
+        const userCredentials: ICredential = await createAccount(refinedValues);
 
         if (userCredentials) {
           setUserCred(refinedValues);
@@ -243,7 +239,7 @@ const EmailForm = ({
             <div className="rounded-full w-16 h-16 bg-secondary/60 flex items-center justify-center relative">
               {userAvatar ? (
                 <Image
-                  src={`https://gateway.pinata.cloud/ipfs/${userAvatar}`}
+                  src={`https://bronze-gigantic-quokka-778.mypinata.cloud/ipfs/${userAvatar}`}
                   alt="avatar"
                   fill
                   className="object-cover rounded-[inherit]"
@@ -377,7 +373,7 @@ const OtpForm = ({
   isRegistering: string | boolean;
   setIsRegistering: any;
   isAuthenticated: boolean;
-  userCred: IUserCredentials | undefined;
+  userCred: ICredential | undefined;
   isNewAccount: boolean;
 }) => {
   const { fetchUser } = useGlobalContext();

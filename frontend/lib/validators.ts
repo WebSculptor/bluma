@@ -21,8 +21,8 @@ export const createEventSchema = z.object({
     .min(3, {
       message: "Event Title too short, minimum is 3 characters",
     })
-    .max(30, {
-      message: "Event Title too long, maximun is 30 characters",
+    .max(100, {
+      message: "Event Title too long, maximum is 100 characters",
     }),
   location: z.string(),
   capacity: z.coerce

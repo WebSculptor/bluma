@@ -25,6 +25,7 @@ import { Transactions } from "@/components/shared/transactions";
 import { useWeb3Modal, useWeb3ModalAccount } from "@web3modal/ethers/react";
 import {
   checkIfUserHasMinted,
+  getRemainingSupply,
   getTokenTotalSupply,
   getUserBalance,
   mintTokenToUser,
@@ -60,7 +61,13 @@ export default function MarketPage() {
     setIsMintingToken(true);
 
     try {
-      const result = await mintTokenToUser(values?.address, values?.tokens);
+      if (Number(values?.tokens) > 2000)
+        return toast.info("You can only mint up to 2000 tokens");
+
+      const result = await mintTokenToUser(
+        values?.address,
+        Number(values?.tokens)
+      );
       console.log(result);
     } catch (error: any) {
       console.log("ERROR MINTING TOKEN: ", error);
@@ -85,22 +92,21 @@ export default function MarketPage() {
 
   const fetchData = async (address: string) => {
     const totalSupply = await getTokenTotalSupply();
+    const remainingSupply = await getRemainingSupply();
     const hasMinted = await checkIfUserHasMinted(address);
     const balance = await getUserBalance(address);
 
-    console.log({ hasMinted });
-
-    setUserBalance(Number(balance).toString());
-    setTotalSupply(totalSupply.toString());
-    setRemainingSupply(Number(totalSupply) - Number(balance));
+    setUserBalance(balance.toLocaleString());
+    setTotalSupply(totalSupply.toLocaleString());
+    setRemainingSupply(remainingSupply.toLocaleString());
     setHasMinted(hasMinted);
   };
 
   useEffect(() => {
     (async () => {
       const contract = await getBlumaTokenContract();
-      contract.on("TransferSuccessful", async (_user, _amount) => {
-        await fetchData(`${address}`);
+      contract.on("Transfer", async (from, to, value) => {
+        await fetchData(to);
       });
     })();
 
@@ -226,6 +232,7 @@ export default function MarketPage() {
                           placeholder="Enter number of tokens"
                           type="number"
                           disabled={isMintingToken || !isConnected || hasMinted}
+                          max={2000}
                           {...field}
                         />
                       </FormControl>
